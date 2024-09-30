@@ -223,11 +223,12 @@ class ImpedanceAnalyzerGUI:
         self.canvas.draw()
 
     def simulate_battery_drain(self):
-        if self.is_connected:
+        if self.is_connected and self.battery_label:
             self.battery_level = max(0, self.battery_level - 1)
             self.battery_label.config(text=f"Batteria: {self.battery_level}%")
             self.master.after(10000, self.simulate_battery_drain)  # Aggiorna ogni 10 secondi
 
-root = tk.Tk()
-app = ImpedanceAnalyzerGUI(root)
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ImpedanceAnalyzerGUI(root)
+    root.mainloop()
