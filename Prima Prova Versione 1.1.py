@@ -225,8 +225,8 @@ class IsulinometroApp(tk.Tk):
         bottom_right_frame.columnconfigure(0, weight=1)
 
         # Adding text to the bottom right frame
-        bottom_right_label = tk.Label(bottom_right_frame, text="Dati e markers", bg="yellow", font=("Arial", 14))
-        bottom_right_label.grid(column=0, row=0, padx=10, pady=10)
+        bottom_right_label = tk.Button(bottom_right_frame, text="Dati e markers", bg="yellow", font=("Arial", 14))
+        bottom_right_label.grid(column=0, row=0, padx=10, pady=10, sticky="nesw")
 
         # Activity Log at the bottom (spans across both columns)
         activity_log = tk.Frame(self.data_frame, bg="grey")
@@ -268,7 +268,7 @@ class IsulinometroApp(tk.Tk):
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
         # Testo Help
-        help_label = tk.Label(self.help_frame, text="Help Section: qui si trova il testo di aiuto", bg="lightyellow")
+        help_label = tk.Label(self.help_frame, text="Help Section: WORK IN PROGRESS. CLICCA X PER USCIRE", bg="lightyellow")
         help_label.grid(column=0, row=1, columnspan=3, padx=20, pady=20, sticky="nesw")
 
 
