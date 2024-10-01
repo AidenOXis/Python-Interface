@@ -92,8 +92,8 @@ class ImpedanceAnalyzerGUI:
         self.progress_bar = ttk.Progressbar(self.control_frame, orient="horizontal", length=200, mode="determinate")
         self.progress_bar.pack()
 
-        self.battery_label = ttk.Label(self.control_frame, text=f"Batteria: {self.battery_level}%")
-        self.battery_label.pack()
+        #self.battery_label = ttk.Label(self.control_frame, text=f"Batteria: {self.battery_level}%")
+        #self.battery_label.pack()
 
     def update_frequency_inputs(self, event):
         for widget in self.freq_frame.winfo_children():
