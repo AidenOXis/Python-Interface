@@ -59,7 +59,7 @@ class IsulinometroApp(tk.Tk):
         tab.columnconfigure(2, weight=1)  # Aggiunto per il pulsante Help
 
         # Aggiunta pulsanti switch modalità
-        btn_home = tk.Button(tab, text="Home", command=lambda: self.show_frame(self.home_frame), height=2, width=10)
+        btn_home = tk.Button(tab, text="Home", command=lambda: self.show_frame(self.home_frame), height=2, width=10, bg= "gray")
         btn_home.grid(column=0, row=0, sticky="nesw", padx=10, pady=2)
 
         btn_data = tk.Button(tab, text="Data", command=lambda: self.show_frame(self.data_frame), height=2, width=10)
@@ -98,27 +98,44 @@ class IsulinometroApp(tk.Tk):
         testo_frame_saved_data.grid(column=0, row=5, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
         # Tab modalità frequenziale
+        #Funzioni dei due bottoni della tab
+        def frequenzasingola_click():
+            input_frame2.grid_forget()
+            input_frame2_text.grid_forget()
+            input_frame.grid(column=1, row=2, columnspan=2, rowspan=4, padx=10, pady=2, sticky="nesw")
+            input_frame_text.grid(column=0, row=4, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
+        
+        def sweepmode_click():
+            input_frame.grid_forget()
+            input_frame_text.grid_forget()
+            input_frame2.grid(column=1, row=2, columnspan=2, rowspan=4, padx=10, pady=2, sticky="nesw")
+            input_frame2_text.grid(column=0, row=4, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
+
         tab2 = tk.Frame(self.home_frame, height=30, bg="white")
         tab2.grid(column=1, row=1, columnspan=2, rowspan=1, padx=10, pady=2, sticky="nesw")
-        frequenzasingola=tk.Button(self.home_frame,text="Frequenza singola",bg="purple", height=2, width=5)
+        frequenzasingola=tk.Button(self.home_frame,text="Frequenza singola",bg="purple", height=2, width=5, command=frequenzasingola_click)
         frequenzasingola.grid(column=1, row=1, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
-        sweepmode=tk.Button(self.home_frame,text="Sweep mode",bg="Green", height=2, width=5)
+        sweepmode=tk.Button(self.home_frame,text="Sweep mode",bg="Green", height=2, width=5, command=sweepmode_click)
         sweepmode.grid(column=2, row=1, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
         
-      
-
         # Configura layout del tab2 per ridimensionamento
         tab2.columnconfigure(0, weight=1)
         tab2.columnconfigure(1, weight=1)
 
-        # Frame dati input
+        # Frame dati input modalità singola
         input_frame = tk.Frame(self.home_frame, bg="orange")
         input_frame.grid(column=1, row=2, columnspan=2, rowspan=4, padx=10, pady=2, sticky="nesw")
 
-        # Testo Input
-        input_frame_text = tk.Label(input_frame, text="Frame di Input", bg="orange", font=("Arial", 12))
+        # Testo Input modaltà singola
+        input_frame_text = tk.Label(input_frame, text="Frame di Input modalità singola", bg="orange", font=("Arial", 12))
         input_frame_text.grid(column=0, row=4, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
         
+        # Frame dati input modalità sweep
+        input_frame2 = tk.Frame(self.home_frame, bg="orange")
+        
+        # Testo Input modalità sweep
+        input_frame2_text = tk.Label(input_frame2, text="Frame di Input modalità sweep", bg="orange", font=("Arial", 12))
+
 
         # Bottone Start
         start = tk.Button(self.home_frame, text="START", height=3, width=2, command=self.start_button_click)
@@ -155,7 +172,7 @@ class IsulinometroApp(tk.Tk):
         btn_home = tk.Button(tab, text="Home", command=lambda: self.show_frame(self.home_frame), height=2, width=10)
         btn_home.grid(column=0, row=0, sticky="nesw", padx=10, pady=2)
 
-        btn_data = tk.Button(tab, text="Data", command=lambda: self.show_frame(self.data_frame), height=2, width=10)
+        btn_data = tk.Button(tab, text="Data", command=lambda: self.show_frame(self.data_frame), height=2, width=10, bg= "gray")
         btn_data.grid(column=1, row=0, sticky="nesw", padx=10, pady=2)
 
         btn_help = tk.Button(tab, text="Help", command=lambda: self.show_frame(self.help_frame), height=2, width=10)
@@ -268,7 +285,7 @@ class IsulinometroApp(tk.Tk):
         btn_data = tk.Button(tab, text="Data", command=lambda: self.show_frame(self.data_frame), height=2, width=10)
         btn_data.grid(column=1, row=0, sticky="nesw", padx=10, pady=2)
 
-        btn_help = tk.Button(tab, text="Help", command=lambda: self.show_frame(self.help_frame), height=2, width=10)
+        btn_help = tk.Button(tab, text="Help", command=lambda: self.show_frame(self.help_frame), height=2, width=10, bg= "gray")
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
         # Testo Help
