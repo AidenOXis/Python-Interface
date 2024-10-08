@@ -40,7 +40,15 @@ class IsulinometroApp(tk.Tk):
 
         self.grid_propagate(False)
         # Configura layout del frame "home"
-        self.home_frame.columnconfigure(0, weight=1)
+
+        #Calcola la larghezza della prima colonna come il 33% della larghezza totale del frame
+        def resize(event):
+            col_width = int(event.width * 0.33)
+            self.home_frame.columnconfigure(0, minsize=col_width)
+
+        #Associa l'evento di ridimensionamento del frame alla funzione resize così che si aggiorni ogni volta che mmodifico la grandezza della finestra
+        self.home_frame.bind("<Configure>", resize)
+
         self.home_frame.columnconfigure(1, weight=1)
         self.home_frame.columnconfigure(2, weight=1)
         self.home_frame.rowconfigure(0, weight=0)
