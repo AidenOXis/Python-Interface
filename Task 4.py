@@ -13,8 +13,6 @@ class IsulinometroApp(tk.Tk):
         self.max_frequency_str = tk.StringVar()
         self.numberRepetitions_str=tk.StringVar()  
        
-
-
         # Imposta la geometria della finestra
         self.geometry("800x400")
 
@@ -68,8 +66,8 @@ class IsulinometroApp(tk.Tk):
         self.home_frame.rowconfigure(3, weight=0)
         self.home_frame.rowconfigure(3, minsize=50) 
         self.home_frame.rowconfigure(4, weight=0)
-        self.home_frame.rowconfigure(5, weight=1)
-        self.home_frame.rowconfigure(6, weight=0)
+        self.home_frame.rowconfigure(5, weight=4)
+        self.home_frame.rowconfigure(6, weight=1)
 
         # Tab per cambiare modalità
         tab = tk.Frame(self.home_frame, height=60, bg="white")
@@ -99,14 +97,6 @@ class IsulinometroApp(tk.Tk):
         bluetooth.rowconfigure(0, weight=0)
         bluetooth.rowconfigure(1, weight=0)
         bluetooth.rowconfigure(2, weight=0)
-
-        #Funzioni dei bottoni del frame Bluetooth
-        def connect_button_click():
-            print("Connect")
-
-        def disconnect_button_click():
-            print("Disconnect")
-
         #oggetti del frame bluetooth
 
         bluetooth_label=tk.Label(bluetooth, text="Bluetooth", bg="blue")
@@ -117,10 +107,10 @@ class IsulinometroApp(tk.Tk):
         testo_connected_device_frame=tk.Label(connected_device_frame, text="Connected Device", bg="gray")
         testo_connected_device_frame.grid(column=0, row=0, padx=10, pady=2, sticky="nesw")
 
-        connect_button=tk.Button(bluetooth, text="Connect", command=connect_button_click ,height=1, width=4)
+        connect_button=tk.Button(bluetooth, text="Connect", command=self.connect_button_click ,height=1, width=4)
         connect_button.grid(column=0, row=2,padx=10, pady=2, sticky="nesw")
 
-        disconnect_button=tk.Button(bluetooth, text="Disconnect", command=disconnect_button_click, height=1, width=4)
+        disconnect_button=tk.Button(bluetooth, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
         disconnect_button.grid(column=1, row=2,padx=10, pady=2, sticky="nesw")
 
         # Frame Batteria
@@ -198,19 +188,19 @@ class IsulinometroApp(tk.Tk):
         sweepmode_button.grid(column=1, row=0, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
         #Dati
-        voltage_label=tk.Label(input_frame, text="Voltage(mV):", bg="orange", font=("Arial", 16))
+        voltage_label=tk.Label(input_frame, text="Voltage(mV):", bg="orange", font=("Arial", 14))
         voltage_label.grid(column=0, row=1, padx=5, pady=2, sticky="nsw")
 
-        voltage_input=tk.Entry(input_frame,textvariable=self.voltage_str, bg="lightgrey")
-        voltage_input.grid(column=1, row=1, padx=5, pady=4, sticky="nesw")
+        voltage_input=tk.Entry(input_frame,textvariable=self.voltage_str, bg="white", font=("Arial", 14))
+        voltage_input.grid(column=1, row=1, padx=15, pady=8, sticky="nesw")
        
 
 
         frequency_label=tk.Label(input_frame, text="Frequency(Hz):", bg="orange", font=("Arial", 16))
         frequency_label.grid( padx=5, pady=2, sticky="nsw")
         
-        frequency_input=tk.Entry(input_frame, textvariable=self.frequency_str,bg="lightgrey")
-        frequency_input.grid(column=1, row=2, padx=5, pady=4, sticky="nesw")
+        frequency_input=tk.Entry(input_frame, textvariable=self.frequency_str,bg="white", font=("Arial", 14))
+        frequency_input.grid(column=1, row=2, padx=15, pady=8, sticky="nesw")
        
         # Frame dati input modalità sweep
         input_frame2 = tk.Frame(self.home_frame, bg="orange")
@@ -240,37 +230,37 @@ class IsulinometroApp(tk.Tk):
         voltage_label = tk.Label(input_frame2, text="Voltage(mV):", bg="orange", font=("Arial", 16))
         voltage_label.grid(column=0, row=1, padx=5, pady=2, sticky="nsw")
         # Campo di input per il voltage
-        voltage_input = tk.Entry(input_frame2, textvariable=self.voltage_str, bg="lightgrey", font=("Arial", 14))  # Aggiunto font per migliorare la visibilità
-        voltage_input.grid(column=1, row=1, padx=5, pady=4, sticky="nesw")
+        voltage_input = tk.Entry(input_frame2, textvariable=self.voltage_str, bg="white", font=("Arial", 16))  # Aggiunto font per migliorare la visibilità
+        voltage_input.grid(column=1, row=1, padx=15, pady=8, sticky="nesw")
 
         # Min Frequency
         minimumFrequency_label = tk.Label(input_frame2, text="Min Frequency(Hz):", bg="orange", font=("Arial", 16))
         minimumFrequency_label.grid(column=0, row=2, padx=5, pady=2, sticky="nsw")
 
-        minimumFrequency_input = tk.Entry(input_frame2, textvariable=self.min_frequency_str, bg="lightgrey", font=("Arial", 14))  # Aggiunto font
-        minimumFrequency_input.grid(column=1, row=2, padx=5, pady=4, sticky="nesw")
+        minimumFrequency_input = tk.Entry(input_frame2, textvariable=self.min_frequency_str, bg="white", font=("Arial", 14))  # Aggiunto font
+        minimumFrequency_input.grid(column=1, row=2, padx=15, pady=8, sticky="nesw")
 
         # Max Frequency
         maximumFrequency_label = tk.Label(input_frame2, text="Max Frequency(Hz):", bg="orange", font=("Arial", 16))
         maximumFrequency_label.grid(column=0, row=3, padx=5, pady=2, sticky="nsw")
 
-        maximumFrequency_input = tk.Entry(input_frame2, textvariable=self.max_frequency_str, bg="lightgrey", font=("Arial", 14))  # Aggiunto font
-        maximumFrequency_input.grid(column=1, row=3, padx=5, pady=4, sticky="nesw")
+        maximumFrequency_input = tk.Entry(input_frame2, textvariable=self.max_frequency_str, bg="white", font=("Arial", 14))  # Aggiunto font
+        maximumFrequency_input.grid(column=1, row=3, padx=15, pady=8, sticky="nesw")
 
         # Number of Repetitions
         numberRepetitions_label = tk.Label(input_frame2, text="Number of repetitions:", bg="orange", font=("Arial", 16))
         numberRepetitions_label.grid(column=0, row=4, pady=2, sticky="nsw")
 
-        numberRepetitions_input = tk.Entry(input_frame2, textvariable=self.numberRepetitions_str, bg="lightgrey", font=("Arial", 14))  # Aggiunto font
-        numberRepetitions_input.grid(column=1, row=4, padx=5, pady=4, sticky="nesw")
+        numberRepetitions_input = tk.Entry(input_frame2, textvariable=self.numberRepetitions_str, bg="white", font=("Arial", 14))  # Aggiunto font
+        numberRepetitions_input.grid(column=1, row=4, padx=15, pady=8, sticky="nesw")
 
 
         # Bottone Start
-        start = tk.Button(self.home_frame, text="START", height=3, width=2, command=self.start_button_click)
+        start = tk.Button(self.home_frame, text="START", height=3, width=2, command=self.start_button_click, bg="yellow", font=("Arial", 12))
         start.grid(column=1, row=6, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
         # Bottone Exit
-        exit_button = tk.Button(self.home_frame, text="EXIT", height=3, width=2, command=self.exit_button_click)
+        exit_button = tk.Button(self.home_frame, text="EXIT", height=3, width=2, command=self.exit_button_click, bg="gray", font=("Arial", 12))
         exit_button.grid(column=2, row=6, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
     def create_data_frame(self):
@@ -281,9 +271,9 @@ class IsulinometroApp(tk.Tk):
         self.data_frame.rowconfigure(0, weight=0)  # Row for the tab
         #self.data_frame.rowconfigure(1, weight=1)  # Row for the main content
         self.data_frame.rowconfigure(1, minsize=20)
-        self.data_frame.rowconfigure(2, weight=3)
-        self.data_frame.rowconfigure(3, weight=3)
-        self.data_frame.rowconfigure(4, minsize=50) 
+        self.data_frame.rowconfigure(2, weight=8)
+        self.data_frame.rowconfigure(3, weight=8)
+        self.data_frame.rowconfigure(4,  weight=2) 
         #self.data_frame.rowconfigure(4, weight=1)
         self.data_frame.rowconfigure(5, weight=1)  # Assign weight to the row for the activity log
 
@@ -424,12 +414,8 @@ class IsulinometroApp(tk.Tk):
     def show_frame(self, frame):
         """ Mostra il frame selezionato """
         frame.tkraise()
-
-
-       
-
-
-    #Funzioni dei Bottoni Generici
+        
+    #Funzioni dei Bottoni 
     def home_button_click(self):
         self.show_frame(self.home_frame)
         print("Home")
@@ -442,22 +428,28 @@ class IsulinometroApp(tk.Tk):
         self.show_frame(self.help_frame)
         print("Help")
 
+    def connect_button_click(self):
+        print("Connect")
+
+    def disconnect_button_click(self):
+        print("Disconnect")
+
     def start_button_click(self):
         print("Start: Visualizzazione dei dati inseriti...\n")
         if self.mode=="Single Mode":  
             voltage=self.voltage_str.get()
             frequency=self.frequency_str.get()
-            print(f"Tensione:",voltage, "mV")
-            print(f"Frequenza:",frequency, "Hz")
+            print(f"Tensione: ",voltage, "mV")
+            print(f"Frequenza: ",frequency, "Hz")
         
         else:
             voltage=self.voltage_str.get()
             min_frequency=self.min_frequency_str.get() 
             max_frequency=self.max_frequency_str.get() 
             numberRepetitions=self.numberRepetitions_str.get()
-            print(f"Tensione:",voltage, "mV")
-            print(f"Frequenza minima:",min_frequency, "Hz") 
-            print(f"Frequenza massima:",max_frequency, "Hz") 
+            print(f"Tensione: ",voltage, "mV")
+            print(f"Frequenza minima: ",min_frequency, "Hz") 
+            print(f"Frequenza massima: ",max_frequency, "Hz") 
             print(f"Numero di Ripetizioni: ", numberRepetitions) 
         self.show_frame(self.data_frame)
 
