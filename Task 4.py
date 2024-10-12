@@ -452,12 +452,10 @@ class IsulinometroApp(tk.Tk):
         
         else:
             voltage=self.voltage_str.get()
-            frequency=self.frequency_str.get()
             min_frequency=self.min_frequency_str.get() 
             max_frequency=self.max_frequency_str.get() 
             numberRepetitions=self.numberRepetitions_str.get()
             print(f"Tensione:",voltage, "mV")
-            print(f"Frequenza:",frequency, "Hz")
             print(f"Frequenza minima:",min_frequency, "Hz") 
             print(f"Frequenza massima:",max_frequency, "Hz") 
             print(f"Numero di Ripetizioni: ", numberRepetitions) 
