@@ -4,7 +4,7 @@ class IsulinometroApp(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.mode=None
+        self.mode="Single Mode"
     
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
@@ -25,15 +25,15 @@ class IsulinometroApp(tk.Tk):
         # Titolo finestra
         self.title("Insulinometro")
 
-        # Inizializzazione di due frame per le modalità Home e Data
+        # Inizializzazione di tre frame per le modalità Home e Data e Help
         self.home_frame = tk.Frame(self)
         self.data_frame = tk.Frame(self)
-        self.help_frame = tk.Frame(self)  # Aggiunto frame Help
+        self.help_frame = tk.Frame(self)  
 
-        # Chiamata per la creazione dei widget nei due frame
+        # Chiamata per la creazione dei widget nei tre frame
         self.create_home_frame()
         self.create_data_frame()
-        self.create_help_frame()  # Aggiunta chiamata per creare il frame Help
+        self.create_help_frame()  
 
         # Imposta il layout del frame principale
         for frame in (self.home_frame, self.data_frame, self.help_frame):
@@ -47,8 +47,8 @@ class IsulinometroApp(tk.Tk):
     def create_home_frame(self):
 
         self.grid_propagate(False)
-        # Configura layout del frame "home"
 
+        # Configura layout del frame "home"
         #Calcola la larghezza della prima colonna come il 33% della larghezza totale del frame
         def resize(event):
             col_width = int(event.width * 0.33)
@@ -69,6 +69,7 @@ class IsulinometroApp(tk.Tk):
         self.home_frame.rowconfigure(5, weight=4)
         self.home_frame.rowconfigure(6, weight=1)
 
+
         # Tab per cambiare modalità
         tab = tk.Frame(self.home_frame, height=60, bg="white")
         tab.grid(column=0, row=0, columnspan=3, rowspan=1, padx=10, pady=2, sticky="nesw")
@@ -76,7 +77,7 @@ class IsulinometroApp(tk.Tk):
         # Aggiungo configurazione del layout del tab per ridimensionamento
         tab.columnconfigure(0, weight=1)
         tab.columnconfigure(1, weight=1)
-        tab.columnconfigure(2, weight=1)  # Aggiunto per il pulsante Help
+        tab.columnconfigure(2, weight=1) 
 
         # Aggiunta pulsanti switch modalità
         btn_home = tk.Button(tab, text="Home", command=self.home_button_click, height=2, width=10, bg= "gray")
@@ -88,6 +89,7 @@ class IsulinometroApp(tk.Tk):
         btn_help = tk.Button(tab, text="Help", command=self.help_button_click, height=2, width=10)
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
+
         # Frame Bluetooth
         bluetooth = tk.Frame(self.home_frame, bg="blue")
         bluetooth.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
@@ -97,8 +99,8 @@ class IsulinometroApp(tk.Tk):
         bluetooth.rowconfigure(0, weight=0)
         bluetooth.rowconfigure(1, weight=0)
         bluetooth.rowconfigure(2, weight=0)
+    
         #oggetti del frame bluetooth
-
         bluetooth_label=tk.Label(bluetooth, text="Bluetooth", bg="blue")
         bluetooth_label.grid(column=0, row=0, padx=10, pady=2, sticky="nsw")
 
@@ -113,6 +115,7 @@ class IsulinometroApp(tk.Tk):
         disconnect_button=tk.Button(bluetooth, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
         disconnect_button.grid(column=1, row=2,padx=10, pady=2, sticky="nesw")
 
+
         # Frame Batteria
         battery_frame= tk.Frame(self.home_frame, height=40, bg="green")
         battery_frame.grid(column=0, row=3, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
@@ -120,7 +123,6 @@ class IsulinometroApp(tk.Tk):
         battery_frame.columnconfigure(0, weight=0)
         battery_frame.columnconfigure(1, weight=1)
         battery_frame.rowconfigure(0, weight=0)
-
 
         battery_label=tk.Label(battery_frame, text="Battery:", bg="green", font=("Arial", 12) )
         battery_label.grid(column=0, row=0, padx=5, pady=2, sticky="nsw")
@@ -131,14 +133,12 @@ class IsulinometroApp(tk.Tk):
         battery_percentage_label.grid(column=0, row=0, padx=5, pady=2, sticky="nesw")
 
 
-       
-
-
         # Testo Dati Salvati
-        testo1 = tk.Label(self.home_frame, text="SAVED DATA", bg="lightgrey")
+        testo1 = tk.Label(self.home_frame, text="SAVED DATA", font=("Arial", 16))
         testo1.grid(column=0, row=4, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
-        # Frame Dati Salvati
+
+        # Frame Dati Salvati 
         salvataggi = tk.Frame(self.home_frame, bg="grey")
         salvataggi.grid(column=0, row=5, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
 
@@ -147,8 +147,7 @@ class IsulinometroApp(tk.Tk):
         testo_frame_saved_data.grid(column=0, row=5, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
 
-        #Frame dati input
-
+        #Frame dati 
         #Funzioni dei due bottoni della tab
         def singlemode_button_click():
             self.mode="Single Mode"
@@ -162,11 +161,11 @@ class IsulinometroApp(tk.Tk):
             input_frame.grid_forget()
             input_frame2.grid(column=1, row=1, columnspan=2, rowspan=5, padx=10, pady=2, sticky="nesw")
             input_frame2.grid_propagate(False)
+
+        
         # Frame dati input modalità singola (automaticamente attivo)
         input_frame = tk.Frame(self.home_frame, bg="orange")
         input_frame.grid(column=1, row=1, columnspan=2, rowspan=5, padx=10, pady=2, sticky="nesw")
-
-
 
         input_frame.columnconfigure(0, weight=1)
         input_frame.columnconfigure(1, weight=1)
@@ -176,7 +175,6 @@ class IsulinometroApp(tk.Tk):
         input_frame.rowconfigure(3,weight=1)
         input_frame.rowconfigure(4,weight=1)
 
-       
         # Tab modalità frequenziale
         tab1 = tk.Frame(input_frame, height=30, bg="white")
         tab1.grid(column=0, row=0, columnspan=2, rowspan=1, padx=0, pady=0, sticky="nesw")
@@ -194,18 +192,15 @@ class IsulinometroApp(tk.Tk):
         voltage_input=tk.Entry(input_frame,textvariable=self.voltage_str, bg="white", font=("Arial", 14))
         voltage_input.grid(column=1, row=1, padx=15, pady=8, sticky="nesw")
        
-
-
         frequency_label=tk.Label(input_frame, text="Frequency(Hz):", bg="orange", font=("Arial", 16))
         frequency_label.grid( padx=5, pady=2, sticky="nsw")
         
         frequency_input=tk.Entry(input_frame, textvariable=self.frequency_str,bg="white", font=("Arial", 14))
         frequency_input.grid(column=1, row=2, padx=15, pady=8, sticky="nesw")
        
+
         # Frame dati input modalità sweep
         input_frame2 = tk.Frame(self.home_frame, bg="orange")
-
-        
 
         input_frame2.columnconfigure(0, weight=1)
         input_frame2.columnconfigure(1, weight=1)
@@ -225,11 +220,10 @@ class IsulinometroApp(tk.Tk):
         sweepmode_button=tk.Button(tab2,text="Sweep Mode",bg="lightgray", height=2, width=5, command=sweepmode_button_click)
         sweepmode_button.grid(column=1, row=0, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
-     
         # Dati
         voltage_label = tk.Label(input_frame2, text="Voltage(mV):", bg="orange", font=("Arial", 16))
         voltage_label.grid(column=0, row=1, padx=5, pady=2, sticky="nsw")
-        # Campo di input per il voltage
+
         voltage_input = tk.Entry(input_frame2, textvariable=self.voltage_str, bg="white", font=("Arial", 16))  # Aggiunto font per migliorare la visibilità
         voltage_input.grid(column=1, row=1, padx=15, pady=8, sticky="nesw")
 
@@ -259,6 +253,7 @@ class IsulinometroApp(tk.Tk):
         start = tk.Button(self.home_frame, text="START", height=3, width=2, command=self.start_button_click, bg="yellow", font=("Arial", 12))
         start.grid(column=1, row=6, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
+
         # Bottone Exit
         exit_button = tk.Button(self.home_frame, text="EXIT", height=3, width=2, command=self.exit_button_click, bg="gray", font=("Arial", 12))
         exit_button.grid(column=2, row=6, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
@@ -276,6 +271,7 @@ class IsulinometroApp(tk.Tk):
         self.data_frame.rowconfigure(4,  weight=2) 
         #self.data_frame.rowconfigure(4, weight=1)
         self.data_frame.rowconfigure(5, weight=1)  # Assign weight to the row for the activity log
+
 
         # Tab for mode switching (unchanged)
         tab = tk.Frame(self.data_frame, height=60, bg="white")
@@ -334,13 +330,13 @@ class IsulinometroApp(tk.Tk):
         lower_left_frame.rowconfigure(1, weight=1)
 
         # Buttons inside the lower left frame
-        reset_button = tk.Button(lower_left_frame, text="RESET", command=self.reset_button_click, bg="purple", height=2, width=5)
+        reset_button = tk.Button(lower_left_frame, text="RESET", command=self.reset_button_click, bg="blue", height=2, width=5)
         reset_button.grid(column=0, row=0, padx=5, pady=5, sticky="nesw")
         
         stop_button = tk.Button(lower_left_frame, text="STOP",command=self.stop_button_click, bg="red", height=2, width=5)
         stop_button.grid(column=1, row=0, padx=5, pady=5, sticky="nesw")
 
-        add_marker_button = tk.Button(lower_left_frame, text="ADD MARKER",command=self.addMarker_button_click, bg="lightpink", height=2, width=5)
+        add_marker_button = tk.Button(lower_left_frame, text="ADD MARKER",command=self.addMarker_button_click, bg="yellow", height=2, width=5)
         add_marker_button.grid(column=0, row=1, padx=5, pady=5, sticky="nesw")
 
         saveData_button = tk.Button(lower_left_frame, text="SAVE DATA", command=self.saveData_button_click, bg="lightblue", height=2, width=5)
@@ -435,24 +431,75 @@ class IsulinometroApp(tk.Tk):
         print("Disconnect")
 
     def start_button_click(self):
-        print("Start: Visualizzazione dei dati inseriti...\n")
-        if self.mode=="Single Mode":  
-            voltage=self.voltage_str.get()
-            frequency=self.frequency_str.get()
-            print(f"Tensione: ",voltage, "mV")
-            print(f"Frequenza: ",frequency, "Hz")
+        print("Start")
+
+        if self.mode=="Single Mode": 
+            try:
+                voltage=int(self.voltage_str.get())
+                frequency=int(self.frequency_str.get())
+                if (voltage < 10 or voltage > 500):
+                    raise ValueError("Errore: il valore della tensione deve essere compreso tra 10mV e 500mV")
+                if (frequency<1 or frequency > 100000):
+                    raise ValueError("Errore: il valore della frequenza deve essere compreso tra 1Hz e 100kHz")
+            except ValueError as e:
+                print(e)
+                print("Reinserire i valori")
+            else:
+                #Approssimo la tensione affinché la risoluzione sia di 10mV
+                if ((voltage % 10) < 5):
+                    voltage = voltage -(voltage % 10)
+                else:
+                    voltage = voltage -(voltage % 10) + 10
+                
+                #Stampa input
+                print(f"Visualizzazione dei dati inseriti...\n")
+                print(f"Tensione: ",voltage, "mV")
+                print(f"Frequenza: ",frequency, "Hz")
+
+                #Passaggio alla schermata Data
+                self.show_frame(self.data_frame)
         
         else:
-            voltage=self.voltage_str.get()
-            min_frequency=self.min_frequency_str.get() 
-            max_frequency=self.max_frequency_str.get() 
-            numberRepetitions=self.numberRepetitions_str.get()
-            print(f"Tensione: ",voltage, "mV")
-            print(f"Frequenza minima: ",min_frequency, "Hz") 
-            print(f"Frequenza massima: ",max_frequency, "Hz") 
-            print(f"Numero di Ripetizioni: ", numberRepetitions) 
-        self.show_frame(self.data_frame)
+            #Sweep Mode
+            try:
+                voltage=int(self.voltage_str.get())
+                min_frequency=int(self.min_frequency_str.get())
+                max_frequency=int(self.max_frequency_str.get())
+                numberRepetitions=int(self.numberRepetitions_str.get())
 
+                if (voltage < 10 or voltage > 500):
+                    raise ValueError("Errore: il valore della tensione deve essere compreso tra 10mV e 500mV")
+                if ((min_frequency<1 or min_frequency > 100000) or (max_frequency<1 or max_frequency > 100000)):
+                    raise ValueError("Errore: i valori delle frequenze devono essere compresi tra 1Hz e 100kHz")
+                if max_frequency <= min_frequency  :
+                    raise ValueError("Errore: la frequenza massima deve essere superiore alla frequenza minima")
+                max_repetetions = max_frequency - min_frequency + 1
+                if numberRepetitions < 2:
+                    raise ValueError("Errore: il numero di ripetizioni inserito è troppo basso")
+                if numberRepetitions > max_repetetions:
+                    raise ValueError("Errore: troppe ripetizioni richieste per l'intervallo frequenziale scelto")
+                
+            except ValueError as e:
+                print(e)
+                print("Reinserire i valori")
+            else:
+                #Approssimo la tensione affinché la risoluzione sia di 10mV
+                if ((voltage % 10) < 5):
+                    voltage = voltage -(voltage % 10)
+                else:
+                    voltage = voltage -(voltage % 10) + 10
+                
+                #Stampa degli input
+                print(f"Visualizzazione dei dati inseriti...\n")
+                print(f"Tensione: ",voltage, "mV")
+                print(f"Frequenza minima: ",min_frequency, "Hz") 
+                print(f"Frequenza massima: ",max_frequency, "Hz") 
+                print(f"Numero di Ripetizioni: ", numberRepetitions) 
+
+                #Passaggio alla schermata Data
+                self.show_frame(self.data_frame)
+        
+       
     def exit_button_click(self):
         print("Exit")
         self.quit()
