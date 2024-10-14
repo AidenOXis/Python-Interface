@@ -438,11 +438,11 @@ class IsulinometroApp(tk.Tk):
                 voltage=int(self.voltage_str.get())
                 frequency=int(self.frequency_str.get())
                 if (voltage < 10 or voltage > 500):
-                    raise ValueError("Errore: il valore della tensione deve essere compreso tra 10mV e 500mV")
+                    raise ValueError("il valore della tensione deve essere compreso tra 10mV e 500mV")
                 if (frequency<1 or frequency > 100000):
-                    raise ValueError("Errore: il valore della frequenza deve essere compreso tra 1Hz e 100kHz")
+                    raise ValueError("il valore della frequenza deve essere compreso tra 1Hz e 100kHz")
             except ValueError as e:
-                print(e)
+                print("Error:",e)
                 print("Reinserire i valori")
             else:
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
@@ -468,19 +468,19 @@ class IsulinometroApp(tk.Tk):
                 numberRepetitions=int(self.numberRepetitions_str.get())
 
                 if (voltage < 10 or voltage > 500):
-                    raise ValueError("Errore: il valore della tensione deve essere compreso tra 10mV e 500mV")
+                    raise ValueError("il valore della tensione deve essere compreso tra 10mV e 500mV")
                 if ((min_frequency<1 or min_frequency > 100000) or (max_frequency<1 or max_frequency > 100000)):
-                    raise ValueError("Errore: i valori delle frequenze devono essere compresi tra 1Hz e 100kHz")
+                    raise ValueError("i valori delle frequenze devono essere compresi tra 1Hz e 100kHz")
                 if max_frequency <= min_frequency  :
-                    raise ValueError("Errore: la frequenza massima deve essere superiore alla frequenza minima")
+                    raise ValueError("la frequenza massima deve essere superiore alla frequenza minima")
                 max_repetetions = max_frequency - min_frequency + 1
                 if numberRepetitions < 2:
-                    raise ValueError("Errore: il numero di ripetizioni inserito è troppo basso")
+                    raise ValueError("il numero di ripetizioni inserito è troppo basso")
                 if numberRepetitions > max_repetetions:
-                    raise ValueError("Errore: troppe ripetizioni richieste per l'intervallo frequenziale scelto")
+                    raise ValueError("troppe ripetizioni richieste per l'intervallo frequenziale scelto")
                 
             except ValueError as e:
-                print(e)
+                print("Error:",e)
                 print("Reinserire i valori")
             else:
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
