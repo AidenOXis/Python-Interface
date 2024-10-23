@@ -525,17 +525,17 @@ class IsulinometroApp(tk.Tk):
         #Reset del grafico del modulo di Bode
         self.x_values_BM = []
         self.y_values_BM = []
-        self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM)
+        self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
 
         #Reset del grafico della fase di Bode
         self.x_values_BF = []
         self.y_values_BF = []
-        self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF)
+        self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
 
         #Reset del grafico di Nyquist
         self.x_values_N = []
         self.y_values_N = []
-        self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N)
+        self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
 
         #Reset tabella
         for item in self.tree.get_children():
@@ -553,10 +553,11 @@ class IsulinometroApp(tk.Tk):
     def saveData_button_click(self):
         print("Save Data")
 
-    def update_graph(self, ax, canvas, x_values, y_values):
+    def update_graph(self, ax, canvas, x_values, y_values, title):
         #Aggiorno il grafico
         ax.clear()
         ax.plot(x_values, y_values, marker = 'o')
+        ax.set_title(title)
         canvas.draw_idle()
 
 
@@ -579,19 +580,19 @@ class IsulinometroApp(tk.Tk):
             self.x_values_BM.append(self.ascissa)   #DA MODIFICARE
             self.y_values_BM.append(resistance)     #DA MODIFICARE
 
-            self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM)
+            self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
             
             #Bode Fase
             self.x_values_BF.append(self.ascissa)   #DA MODIFICARE
             self.y_values_BF.append(resistance)     #DA MODIFICARE
 
-            self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF)
+            self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
 
             #Nyquist
             self.x_values_N.append(self.ascissa)    #DA MODIFICARE
             self.y_values_N.append(resistance)      #DA MODIFICARE
 
-            self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N)
+            self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
 
            #Incremento il valore PROVVISORIO dell'ascissa
             self.ascissa=self.ascissa+1
