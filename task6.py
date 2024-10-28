@@ -9,10 +9,13 @@ import threading
 
 class InsulinometroApp(tk.Tk):
 
+    
+
     def __init__(self):
         super().__init__()
         self.mode="Single Mode"
-        
+        global popup_aperto 
+        popup_aperto= False
         self.devices = []
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
@@ -616,37 +619,79 @@ class InsulinometroApp(tk.Tk):
         update_button.pack(pady=10)
     
     def run_scanning(self):
-        print("Starting scanning...")
-        thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices()))  # Esegui la scansione
-        thread.start()
+        global popup_aperto
+        if popup_aperto:
+            print("Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione")
+            return
+        elif popup_aperto == False:
+            popup_aperto = True
+            print("Starting scanning...")
+            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_open_popup()))  # Esegui la scansione
+            thread.start()
+            
 
     def open_device_list_popup(self, devices):
         # Crea un nuovo popup
         popup = tk.Toplevel(self)
         popup.title("Dispositivi trovati")
         popup.geometry("300x200")
-        # Crea un Listbox per mostrare i dispositivi
-        device_listbox = tk.Listbox(popup)
-        device_listbox.rowconfigure(0,weight=1)
-        device_listbox.grid(row=0,padx=5,pady=2,sticky='nesw')
-        
-        # Aggiungi i dispositivi trovati al Listbox
-        for device in devices:
-            device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi alla lista
-        
-        # Pulsante per chiudere il popup
-        close_button = tk.Button(popup, text="Chiudi", command=popup.destroy)
-        close_button.grid(row=1, column=0, pady=10)  # Usa grid per il pulsante "Chiudi"
 
         # Configura il layout del popup
         popup.grid_rowconfigure(0, weight=1)  # Permette al Listbox di espandersi
+        popup.grid_rowconfigure(1, weight=0)
         popup.grid_columnconfigure(0, weight=1)  # Permette al Listbox di espandersi
+        popup.columnconfigure(1, weight=1)
+        
+        # Crea un Listbox per mostrare i dispositivi
+        self.device_listbox = tk.Listbox(popup)
+        self.device_listbox.rowconfigure(0,weight=1)
+        self.device_listbox.grid(row=0, columnspan=2, padx=5,pady=2,sticky='nesw')
+            
+        # Aggiungi i dispositivi trovati al Listbox
+        for device in devices:
+            self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi alla lista
+            
+        #Pulsante per aggiornare il pop up
+        update_button = tk.Button(popup, text="Aggiorna", command=self.update_device_listbox)
+        update_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
+
+        #Funzione per la chiusura del popup affinché pop_aperto venga modificato
+        def close_popup():
+            print("Chiusura finestra bluetooth")
+            global popup_aperto
+            popup_aperto = False
+            popup.destroy()
+
+        # Pulsante per chiudere il popup
+        close_button = tk.Button(popup, text="Chiudi", command=close_popup)
+        close_button.grid(row=1, column=1,padx = 10, pady=5, sticky="nesw")  
+        
+        #Affinché la variabile popup_aperto si modifichi anche se chiudo la finestra
+        popup.protocol("WM_DELETE_WINDOW", close_popup)
+
+    def update_device_listbox(self):
+            print("Starting scanning...")
+            # Esegui una nuova scansione e aggiorna la lista
+            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_update()))  # Esegui la scansione
+            thread.start()
+
+    async def scan_for_devices_and_update(self):
+            print("Scanning for devices...")
+            self.devices = await BleakScanner.discover()  # Scansione dei dispositivi
+            print("Fine scansione")
+
+            self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
+            for device in self.devices:
+                self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi i nuovi dispositivi
 
 
-    async def scan_for_devices(self):
+    async def scan_for_devices_and_open_popup(self):
         print("Scanning for devices...")
         self.devices = await BleakScanner.discover()  # Scansione dei dispositivi
+        print("Fine scansione")
         self.open_device_list_popup(self.devices)  # Apri il popup con i dispositivi trovati
+
+    
 
 if __name__ == "__main__":
     app = InsulinometroApp()
