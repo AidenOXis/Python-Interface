@@ -6,6 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from bleak import BleakScanner 
 import asyncio
 import threading
+from bleak import BleakClient
 
 class InsulinometroApp(tk.Tk):
 
@@ -690,6 +691,35 @@ class InsulinometroApp(tk.Tk):
         self.devices = await BleakScanner.discover()  # Scansione dei dispositivi
         print("Fine scansione")
         self.open_device_list_popup(self.devices)  # Apri il popup con i dispositivi trovati
+
+
+    async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
+        client = BleakClient(address)
+        try:
+            await client.connect()
+            print("Connessione al dispositivo riuscita!")
+        except Exception as e:
+            print(f"Errore di connessione: {e}")
+        return client
+
+    async def write_command(client, characteristic_uuid, command):
+        try:
+            await client.write_gatt_char(characteristic_uuid, command)
+            print(f"Comando inviato: {command}")
+        except Exception as e:
+            print(f"Errore durante l'invio del comando: {e}")
+    
+    async def start_device(self, client, characteristic_uuid):
+        command = b'\x01'  # 0x01 come comando per "start"
+        await self.write_command(client, characteristic_uuid, command)
+    
+    async def read_data(client, characteristic_uuid):
+        try:
+            data = await client.read_gatt_char(characteristic_uuid)
+            print(f"Dati letti: {data}")
+            return data
+        except Exception as e:
+            print(f"Errore durante la lettura dei dati: {e}")
 
     
 
