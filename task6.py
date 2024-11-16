@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk,scrolledtext
+from tkinter import ttk,scrolledtext,messagebox
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -662,7 +662,7 @@ class InsulinometroApp(tk.Tk):
                 # Ottieni l'indice della selezione
                 selected_index = self.device_listbox.curselection()[0]
                 selected_device = devices[selected_index]
-                self.selected_mac.set(selected_device["address"])
+                self.selected_mac.set(selected_device.address)
                 connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
             except IndexError:
                 self.selected_mac.set("")
@@ -671,18 +671,31 @@ class InsulinometroApp(tk.Tk):
         # Associa la funzione di selezione alla Listbox
         self.device_listbox.bind("<<ListboxSelect>>", update_selected_mac)
         
-        def connect_to_device():
+        async def connect_to_device():
             mac_address = self.selected_mac.get()
-            if mac_address:
-                print(f"Connecting to device with MAC: {mac_address}")
-            else:
-                print("No device selected!")
+            if not mac_address:
+                messagebox.showwarning("Errore", "Nessun dispositivo selezionato!")
+                return
+
+            try:
+                # Usa BleakClient per connettersi al dispositivo BLE
+                async with BleakClient(mac_address) as client:
+                    connected = await client.is_connected()
+                    if connected:
+                        messagebox.showinfo("Successo", f"Connesso al dispositivo {mac_address}")
+                    else:
+                        messagebox.showerror("Errore", f"Connessione fallita al dispositivo {mac_address}")
+            except Exception as e:
+                messagebox.showerror("Errore", f"Errore durante la connessione: {e}")
+
+        def connect_button_handler():
+            asyncio.run(connect_to_device())
 
         #Pulsante per aggiornare il pop up
         update_button = tk.Button(popup, text="Aggiorna", command=self.update_device_listbox)
         update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
 
-        connect_button = tk.Button(popup, text="Connetti", command=connect_to_device)
+        connect_button = tk.Button(popup, text="Connetti", command=connect_button_handler)
         connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
 
         #Funzione per la chiusura del popup affinché pop_aperto venga modificato
