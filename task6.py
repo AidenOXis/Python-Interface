@@ -10,14 +10,13 @@ from bleak import BleakClient
 
 class InsulinometroApp(tk.Tk):
 
-    
-
     def __init__(self):
         super().__init__()
         self.mode="Single Mode"
         global popup_aperto 
         popup_aperto= False
         self.devices = []
+        self.ble_address = 0
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
         self.frequency_str = tk.StringVar()
@@ -454,6 +453,25 @@ class InsulinometroApp(tk.Tk):
     def start_button_click(self):
         print("Start")
 
+        #Acquisizione dei valori delle entry e controllo su di essi
+        success = self.acquire_values()
+
+        if(success == True):
+            if self.ble_address != 0:
+                if self.is_device_connected == True:
+                    #TODO
+                    print(".")
+                else:
+                    print("Errore nella connessione al dispositivo")
+            else:
+                #AREA TEST
+                #Passaggio alla schermata Data
+                self.show_frame(self.data_frame)
+                self.open_popup()   #Per eseguire il test sul plottaggio dei grafici
+        
+
+    def acquire_values(self):
+        success = False
         if self.mode=="Single Mode": 
             try:
                 voltage=int(self.voltage_str.get())
@@ -466,6 +484,7 @@ class InsulinometroApp(tk.Tk):
                 print("Error:",e)
                 print("Reinserire i valori")
             else:
+                success = True
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
                 if ((voltage % 10) < 5):
                     voltage = voltage -(voltage % 10)
@@ -477,9 +496,8 @@ class InsulinometroApp(tk.Tk):
                 print(f"Tensione: ",voltage, "mV")
                 print(f"Frequenza: ",frequency, "Hz")
 
-                #Passaggio alla schermata Data
-                self.show_frame(self.data_frame)
-                self.open_popup() #pop up provvisorio per l'inserimento della resistenza da tastiera
+            finally:
+                return success
         
         else:
             #Sweep Mode
@@ -505,6 +523,7 @@ class InsulinometroApp(tk.Tk):
                 print("Error:",e)
                 print("Reinserire i valori")
             else:
+                success = True
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
                 if ((voltage % 10) < 5):
                     voltage = voltage -(voltage % 10)
@@ -517,10 +536,9 @@ class InsulinometroApp(tk.Tk):
                 print(f"Frequenza minima: ",min_frequency, "Hz") 
                 print(f"Frequenza massima: ",max_frequency, "Hz") 
                 print(f"Numero di Ripetizioni: ", numberRepetitions) 
+            finally:
+                return success
 
-                #Passaggio alla schermata Data
-                self.show_frame(self.data_frame)
-                self.open_popup()
         
     def exit_button_click(self):
         print("Exit")
@@ -673,6 +691,7 @@ class InsulinometroApp(tk.Tk):
         
         async def connect_to_device():
             mac_address = self.selected_mac.get()
+            self.ble_address = mac_address
             if not mac_address:
                 messagebox.showwarning("Errore", "Nessun dispositivo selezionato!")
                 return
@@ -695,6 +714,7 @@ class InsulinometroApp(tk.Tk):
         update_button = tk.Button(popup, text="Aggiorna", command=self.update_device_listbox)
         update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
 
+        #Pulsante per connettersi al dispositivo selezionato
         connect_button = tk.Button(popup, text="Connetti", command=connect_button_handler)
         connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
 
@@ -759,6 +779,17 @@ class InsulinometroApp(tk.Tk):
             return data
         except Exception as e:
             print(f"Errore durante la lettura dei dati: {e}")
+
+    def is_device_connected(address):
+        client = BleakClient(address)
+        try:
+            client.connect()
+            connected = client.is_connected
+            client.disconnect()
+            return connected
+        except Exception as e:
+            print(f"Errore: {e}")
+            return False
 
     
 
