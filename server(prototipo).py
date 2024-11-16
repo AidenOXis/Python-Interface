@@ -1,5 +1,6 @@
 import dbus
 import dbus.mainloop.glib
+import dbus.service
 import gi
 from gi.repository import GLib
 import random
@@ -7,9 +8,9 @@ import random
 # Inizializzazione del ciclo principale DBus
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0"
-CHARACTERISTIC_UUID_READ = "12345678-1234-5678-1234-56789abcdef1"
-CHARACTERISTIC_UUID_WRITE = "12345678-1234-5678-1234-56789abcdef2"
+SERVICE_UUID = "12345678_1234_5678_1234_56789abcdef0"
+CHARACTERISTIC_UUID_READ = "12345678_1234_5678_1234_56789abcdef1"
+CHARACTERISTIC_UUID_WRITE = "12345678_1234_5678_1234_56789abcdef2" 
 
 class Application(dbus.service.Object):
     def __init__(self, bus):
