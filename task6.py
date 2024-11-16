@@ -122,7 +122,7 @@ class InsulinometroApp(tk.Tk):
         testo_connected_device_frame=tk.Label(connected_device_frame, text="Connected Device", bg="gray")
         testo_connected_device_frame.grid(column=0, row=0, padx=10, pady=2, sticky="nesw")
 
-        connect_button=tk.Button(bluetooth, text="Connect", command=self.connect_button_click ,height=1, width=4)
+        connect_button=tk.Button(bluetooth, text="Scan", command=self.connect_button_click ,height=1, width=4)
         connect_button.grid(column=0, row=2,padx=10, pady=2, sticky="nesw")
 
         disconnect_button=tk.Button(bluetooth, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
@@ -445,7 +445,7 @@ class InsulinometroApp(tk.Tk):
         print("Help")
     
     def connect_button_click(self):
-        print("Connect")
+        print("Scanning")
         self.run_scanning()
     
     def disconnect_button_click(self):
@@ -618,6 +618,8 @@ class InsulinometroApp(tk.Tk):
 
         update_button = tk.Button(popup, text="Aggiorna", command=self.update_graph_and_tree)
         update_button.pack(pady=10)
+
+
     
     def run_scanning(self):
         global popup_aperto
@@ -642,6 +644,9 @@ class InsulinometroApp(tk.Tk):
         popup.grid_rowconfigure(1, weight=0)
         popup.grid_columnconfigure(0, weight=1)  # Permette al Listbox di espandersi
         popup.columnconfigure(1, weight=1)
+
+        # Variabile per memorizzare l'indirizzo MAC selezionato
+        self.selected_mac = tk.StringVar()
         
         # Crea un Listbox per mostrare i dispositivi
         self.device_listbox = tk.Listbox(popup)
@@ -651,10 +656,34 @@ class InsulinometroApp(tk.Tk):
         # Aggiungi i dispositivi trovati al Listbox
         for device in devices:
             self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi alla lista
-            
+        
+        def update_selected_mac(event):
+            try:
+                # Ottieni l'indice della selezione
+                selected_index = self.device_listbox.curselection()[0]
+                selected_device = devices[selected_index]
+                self.selected_mac.set(selected_device["address"])
+                connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
+            except IndexError:
+                self.selected_mac.set("")
+                connect_button.config(state=tk.DISABLED)  # Disabilita il pulsante Connetti
+
+        # Associa la funzione di selezione alla Listbox
+        self.device_listbox.bind("<<ListboxSelect>>", update_selected_mac)
+        
+        def connect_to_device():
+            mac_address = self.selected_mac.get()
+            if mac_address:
+                print(f"Connecting to device with MAC: {mac_address}")
+            else:
+                print("No device selected!")
+
         #Pulsante per aggiornare il pop up
         update_button = tk.Button(popup, text="Aggiorna", command=self.update_device_listbox)
-        update_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
+        update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
+
+        connect_button = tk.Button(popup, text="Connetti", command=connect_to_device)
+        connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
 
         #Funzione per la chiusura del popup affinché pop_aperto venga modificato
         def close_popup():
@@ -663,9 +692,6 @@ class InsulinometroApp(tk.Tk):
             popup_aperto = False
             popup.destroy()
 
-        # Pulsante per chiudere il popup
-        close_button = tk.Button(popup, text="Chiudi", command=close_popup)
-        close_button.grid(row=1, column=1,padx = 10, pady=5, sticky="nesw")  
         
         #Affinché la variabile popup_aperto si modifichi anche se chiudo la finestra
         popup.protocol("WM_DELETE_WINDOW", close_popup)
@@ -693,14 +719,14 @@ class InsulinometroApp(tk.Tk):
         self.open_device_list_popup(self.devices)  # Apri il popup con i dispositivi trovati
 
 
-    async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
-        client = BleakClient(address)
-        try:
-            await client.connect()
-            print("Connessione al dispositivo riuscita!")
-        except Exception as e:
-            print(f"Errore di connessione: {e}")
-        return client
+#    async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
+#        client = BleakClient(address)
+#        try:
+#            await client.connect()
+#            print("Connessione al dispositivo riuscita!")
+#        except Exception as e:
+#            print(f"Errore di connessione: {e}")
+#        return client
 
     async def write_command(client, characteristic_uuid, command):
         try:
