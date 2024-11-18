@@ -7,6 +7,7 @@ from bleak import BleakScanner
 import asyncio
 import threading
 from bleak import BleakClient
+import math
 
 SERVICE_UUID = "12345678_1234_5678_1234_56789abcdef0"
 CHARACTERISTIC_UUID_READ = "12345678_1234_5678_1234_56789abcdef1"
@@ -125,7 +126,7 @@ class InsulinometroApp(tk.Tk):
         label_bluetooth = tk.Label(self.disconnected_bluetooth_frame, text="Bluetooth: Disconnected", bg="blue",font=("Arial", 14))
         label_bluetooth.grid(column=0, row=0, padx=10, pady=2, sticky="nw")
 
-        scan_button = tk.Button(self.disconnected_bluetooth_frame, text="Scan", command=self.connect_button_click ,height=1, width=4)
+        scan_button = tk.Button(self.disconnected_bluetooth_frame, text="Scan", command=self.scan_button_click ,height=1, width=4)
         scan_button.grid(column=0, row=1, padx=10, pady=2, sticky="nesw")
 
 
@@ -146,7 +147,7 @@ class InsulinometroApp(tk.Tk):
         bluetooth_label=tk.Label(self.connected_bluetooth_frame, text= "Device: " + self.ble_name, bg="blue", font=("Arial", 12))
         bluetooth_label.grid(column=0, row=1, columnspan=2, padx=10, pady=2, sticky="nw")
 
-        scan_button = tk.Button(self.connected_bluetooth_frame, text="Scan", command=self.connect_button_click ,height=1, width=4)
+        scan_button = tk.Button(self.connected_bluetooth_frame, text="Scan", command=self.scan_button_click ,height=1, width=4)
         scan_button.grid(column=0, row=2, padx=10, pady=2, sticky="nesw")
 
         disconnect_button=tk.Button(self.connected_bluetooth_frame, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
@@ -366,8 +367,6 @@ class InsulinometroApp(tk.Tk):
         self.canvas_widget_BF.grid(column=0, row=3, padx=10, pady=2, sticky="nesw")
 
 
-
-
         # Lower Frame with buttons
         lower_left_frame = tk.Frame(self.data_frame, bg="cyan")
         lower_left_frame.grid(column=0, row=4, padx=10, pady=2, sticky="nesw")
@@ -399,6 +398,14 @@ class InsulinometroApp(tk.Tk):
         self.canvas_N = FigureCanvasTkAgg(self.fig_N, self.data_frame)
         self.canvas_widget_N = self.canvas_N.get_tk_widget()
         self.canvas_widget_N.grid(column=1, row=2, rowspan=2, padx=10, pady=2, sticky="nesw")
+
+
+        #da aggiornare
+        #self.cid_BF = self.connect_click_marker(
+        #    canvas=self.canvas_BF, fig=self.fig_BF, ax=self.ax_BF, x_data=self.x_BF, y_data=self.y_BFs)
+        #self.cid = self.canvas_BM('button_press_event', lambda event, ax=ax: self.on_click(event, ax, x_data, y_data))
+        #self.cid = self.canvas_BF.mpl_connect('button_press_event', self.on_click(fig= self.fig_BF, ax= self.ax_BF))
+        #self.cid = self.canvas_N.mpl_connect('button_press_event', self.on_click(fig= self.fig_N, ax= self.ax_N))
 
         # Tabella
         self.columns=('index', 'value')
@@ -533,7 +540,7 @@ Suggerimenti utili:
         self.show_frame(self.help_frame)
         print("Help")
     
-    def connect_button_click(self):
+    def scan_button_click(self):
         print("Scanning")
         self.run_scanning()
     
@@ -614,6 +621,7 @@ Suggerimenti utili:
             except ValueError as e:
                 print("Error:",e)
                 print("Reinserire i valori")
+                messagebox.showerror("Errore", e )
             else:
                 success = True
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
@@ -641,6 +649,7 @@ Suggerimenti utili:
                 if (voltage < 10 or voltage > 500):
                     raise ValueError("il valore della tensione deve essere compreso tra 10mV e 500mV")
                 if ((min_frequency<1 or min_frequency > 100000) or (max_frequency<1 or max_frequency > 100000)):
+                    
                     raise ValueError("i valori delle frequenze devono essere compresi tra 1Hz e 100kHz")
                 if max_frequency <= min_frequency  :
                     raise ValueError("la frequenza massima deve essere superiore alla frequenza minima")
@@ -653,6 +662,7 @@ Suggerimenti utili:
             except ValueError as e:
                 print("Error:",e)
                 print("Reinserire i valori")
+                messagebox.showerror("Errore", e)
             else:
                 success = True
                 #Approssimo la tensione affinché la risoluzione sia di 10mV
@@ -734,6 +744,7 @@ Suggerimenti utili:
         except ValueError as e:
                 print("Error:",e)
                 print("Reinserire il valore")
+                messagebox.showerror("Errore", e)
         else:
             
             #Aggiorno la tabbella
@@ -761,6 +772,7 @@ Suggerimenti utili:
            #Incremento il valore PROVVISORIO dell'ascissa
             self.ascissa=self.ascissa+1
 
+
     def open_popup_input(self):
         #Creazione del popup
         self.popup_input = tk.Toplevel()
@@ -787,12 +799,13 @@ Suggerimenti utili:
             return
         elif popup_scan_aperto == False:
             popup_scan_aperto = True
+            self.open_device_list_popup()
             print("Starting scanning...")
-            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_open_popup()))  # Esegui la scansione
+            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_update()))  # Esegui la scansione
             thread.start()
             
 
-    def open_device_list_popup(self, devices):
+    def open_device_list_popup(self):
         # Crea un nuovo popup
         self.popup_scan = tk.Toplevel(self)
         self.popup_scan.title("Dispositivi trovati")
@@ -814,14 +827,14 @@ Suggerimenti utili:
         self.device_listbox.grid(row=0, columnspan=2, padx=5,pady=2,sticky='nesw')
             
         # Aggiungi i dispositivi trovati al Listbox
-        for device in devices:
-            self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi alla lista
+
+        self.device_listbox.insert(tk.END, "Scanning for devices...")  # Aggiungi alla lista
         
         def update_selected_mac(event):
             try:
                 # Ottieni l'indice della selezione
                 selected_index = self.device_listbox.curselection()[0]
-                selected_device = devices[selected_index]
+                selected_device = self.found_devices[selected_index]
                 self.selected_name.set(selected_device.name)
                 self.selected_mac.set(selected_device.address)
                 connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
@@ -853,9 +866,13 @@ Suggerimenti utili:
                 messagebox.showerror("Errore", f"Errore durante la connessione: {e}")
 
         def connect_button_handler():
-            #asyncio.run(connect_to_device())
+            asyncio.run(connect_to_device())
+            self.ble_address = self.selected_mac
+            self.ble_name = self.selected_name
+
             self.open_popup_dati()
             self.switch_bluetooth_frame(True)
+            
 
         #Pulsante per aggiornare il pop up
         update_button = tk.Button(self.popup_scan, text="Aggiorna", command=self.update_device_listbox)
@@ -886,20 +903,18 @@ Suggerimenti utili:
 
 
     async def scan_for_devices_and_update(self):
+            self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
+            self.device_listbox.insert(tk.END, "Scanning for devices...")
+
             print("Scanning for devices...")
-            self.devices = await BleakScanner.discover()  # Scansione dei dispositivi
+            self.found_devices = await BleakScanner.discover()  # Scansione dei dispositivi
             print("Fine scansione")
 
             self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
-            for device in self.devices:
+            for device in self.found_devices:
                 self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi i nuovi dispositivi
 
 
-    async def scan_for_devices_and_open_popup(self):
-        print("Scanning for devices...")
-        self.devices = await BleakScanner.discover()  # Scansione dei dispositivi
-        print("Fine scansione")
-        self.open_device_list_popup(self.devices)  # Apri il popup con i dispositivi trovati
 
 
 #    async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
@@ -1048,8 +1063,46 @@ Suggerimenti utili:
             self.connected_bluetooth_frame.grid_forget()
             self.disconnected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
             
-            
+    def connect_click_marker(self, canvas, fig, ax, x_data, y_data):
+        """ Metodo riutilizzabile per collegare l'evento di clic a un grafico. """
+        def on_click(event):
+            """ Gestisce il clic del mouse sul grafico e aggiunge un marker vicino ai punti esistenti. """
+            if event.inaxes != ax:
+                return
 
+            x_click = event.xdata
+            y_click = event.ydata
+            if x_click is None or y_click is None:
+                print("Clic fuori dal grafico")
+                return
+
+            print(f"Clic su ({x_click}, {y_click})")
+
+            # Trova il punto più vicino
+            threshold = 0.5
+            closest_point = None
+            min_distance = float('inf')
+
+            for i in range(len(x_data)):
+                distance = math.sqrt((x_data[i] - x_click) ** 2 + (y_data[i] - y_click) ** 2)
+                if distance < min_distance and distance < threshold:
+                    min_distance = distance
+                    closest_point = (x_data[i], y_data[i])
+
+            if closest_point:
+                print(f"Aggiunto marker su {closest_point}")
+                ax.plot(closest_point[0], closest_point[1], 'ro')
+                fig.canvas.draw_idle()
+            else:
+                self.show_incorrect_mark()
+
+        # Connetti l'evento di clic al grafico
+        canvas.mpl_connect("button_press_event", on_click)
+
+    def show_incorrect_mark(self):
+        """ Mostra un pop-up di errore se il clic non è preciso. """
+        messagebox.showerror("Errore",
+                             "Clic troppo lontano dai punti esistenti!\nPer favore, clicca più vicino a un punto del grafico.")
 
 
 if __name__ == "__main__":
