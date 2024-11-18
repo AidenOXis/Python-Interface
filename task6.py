@@ -8,15 +8,27 @@ import asyncio
 import threading
 from bleak import BleakClient
 
+SERVICE_UUID = "12345678_1234_5678_1234_56789abcdef0"
+CHARACTERISTIC_UUID_READ = "12345678_1234_5678_1234_56789abcdef1"
+CHARACTERISTIC_UUID_WRITE = "12345678_1234_5678_1234_56789abcdef2" 
+
 class InsulinometroApp(tk.Tk):
 
     def __init__(self):
         super().__init__()
         self.mode="Single Mode"
-        global popup_aperto 
-        popup_aperto= False
+        
+        global popup_scan_aperto
+        popup_scan_aperto = False
+
+        global popup_dati_aperto
+        popup_dati_aperto = False
+
         self.devices = []
+
         self.ble_address = 0
+        self.ble_name = "None"
+
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
         self.frequency_str = tk.StringVar()
@@ -102,35 +114,47 @@ class InsulinometroApp(tk.Tk):
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
 
-        # Frame Bluetooth
-        bluetooth = tk.Frame(self.home_frame, bg="blue")
-        bluetooth.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+        # Frame Bluetooth Caso Disconnesso
+        self.disconnected_bluetooth_frame = tk.Frame(self.home_frame, bg="blue")
+        self.disconnected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
 
-        bluetooth.columnconfigure(0, weight=1)
-        bluetooth.columnconfigure(1, weight=1)
-        bluetooth.rowconfigure(0, weight=0)
-        bluetooth.rowconfigure(1, weight=0)
-        bluetooth.rowconfigure(2, weight=0)
-    
-        #oggetti del frame bluetooth
-        bluetooth_label=tk.Label(bluetooth, text="Bluetooth", bg="blue")
-        bluetooth_label.grid(column=0, row=0, padx=10, pady=2, sticky="nsw")
+        self.disconnected_bluetooth_frame.columnconfigure(0, weight=1)
+        self.disconnected_bluetooth_frame.rowconfigure(0, weight=0)
+        self.disconnected_bluetooth_frame.rowconfigure(1, weight=0)
 
-        connected_device_frame=tk.Frame(bluetooth, height=40, bg="grey")
-        connected_device_frame.grid(column=0, row=1, columnspan=2, padx=10, pady=2, sticky="nesw")
-        testo_connected_device_frame=tk.Label(connected_device_frame, text="Connected Device", bg="gray")
-        testo_connected_device_frame.grid(column=0, row=0, padx=10, pady=2, sticky="nesw")
+        label_bluetooth = tk.Label(self.disconnected_bluetooth_frame, text="Bluetooth: Disconnected", bg="blue",font=("Arial", 14))
+        label_bluetooth.grid(column=0, row=0, padx=10, pady=2, sticky="nw")
 
-        connect_button=tk.Button(bluetooth, text="Scan", command=self.connect_button_click ,height=1, width=4)
-        connect_button.grid(column=0, row=2,padx=10, pady=2, sticky="nesw")
+        scan_button = tk.Button(self.disconnected_bluetooth_frame, text="Scan", command=self.connect_button_click ,height=1, width=4)
+        scan_button.grid(column=0, row=1, padx=10, pady=2, sticky="nesw")
 
-        disconnect_button=tk.Button(bluetooth, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
+
+        # Frame Bluetooth Caso Connesso
+        self.connected_bluetooth_frame = tk.Frame(self.home_frame, bg="blue")
+        #self.connected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw") #TEST
+
+        self.connected_bluetooth_frame.columnconfigure(0, weight=1)
+        self.connected_bluetooth_frame.columnconfigure(1, weight=1)
+        self.connected_bluetooth_frame.rowconfigure(0, weight=0)
+        self.connected_bluetooth_frame.rowconfigure(1, weight=0)
+        self.connected_bluetooth_frame.rowconfigure(2, weight=0)
+        self.connected_bluetooth_frame.rowconfigure(3, weight=0)
+
+        label_bluetooth = tk.Label(self.connected_bluetooth_frame, text="Bluetooth: Connected", bg="blue",font=("Arial", 14))
+        label_bluetooth.grid(column=0, row=0, columnspan=2 ,padx=10, pady=2, sticky="nw")
+
+        bluetooth_label=tk.Label(self.connected_bluetooth_frame, text= "Device: " + self.ble_name, bg="blue", font=("Arial", 12))
+        bluetooth_label.grid(column=0, row=1, columnspan=2, padx=10, pady=2, sticky="nw")
+
+        scan_button = tk.Button(self.connected_bluetooth_frame, text="Scan", command=self.connect_button_click ,height=1, width=4)
+        scan_button.grid(column=0, row=2, padx=10, pady=2, sticky="nesw")
+
+        disconnect_button=tk.Button(self.connected_bluetooth_frame, text="Disconnect", command=self.disconnect_button_click, height=1, width=4)
         disconnect_button.grid(column=1, row=2,padx=10, pady=2, sticky="nesw")
 
-
         # Frame Batteria
-        battery_frame= tk.Frame(self.home_frame, height=40, bg="green")
-        battery_frame.grid(column=0, row=3, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
+        battery_frame= tk.Frame(self.connected_bluetooth_frame, height=40, bg="green")
+        battery_frame.grid(column=0, row=3, columnspan=2, rowspan=1, padx=10, pady=2, sticky="nesw")
 
         battery_frame.columnconfigure(0, weight=0)
         battery_frame.columnconfigure(1, weight=1)
@@ -147,12 +171,12 @@ class InsulinometroApp(tk.Tk):
 
         # Testo Dati Salvati
         testo1 = tk.Label(self.home_frame, text="SAVED DATA", font=("Arial", 16))
-        testo1.grid(column=0, row=4, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
+        testo1.grid(column=0, row=3, columnspan=1, rowspan=1, padx=10, pady=2, sticky="nesw")
 
 
         # Frame Dati Salvati 
         salvataggi = tk.Frame(self.home_frame, bg="grey")
-        salvataggi.grid(column=0, row=5, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+        salvataggi.grid(column=0, row=4, columnspan=1, rowspan=3, padx=10, pady=2, sticky="nesw")
 
         # Testo Frame Dati Salvati
         testo_frame_saved_data = tk.Label(salvataggi, text="Frame dei dati salvati", bg="grey", font=("Arial", 12))
@@ -382,6 +406,8 @@ class InsulinometroApp(tk.Tk):
         self.tree.grid(column=1, row=4, padx=10, pady=2, sticky="nesw")
         self.tree.heading('index', text ='Index')
         self.tree.heading('value', text ='Resistance(Ohm)')
+        self.tree_indexes = []
+        self.tree_values = []
 
         # Activity Log at the bottom (spans across both columns)
         activity_log = tk.Frame(self.data_frame, bg="grey")
@@ -402,6 +428,70 @@ class InsulinometroApp(tk.Tk):
         self.help_frame.columnconfigure(2, weight=1)
         self.help_frame.rowconfigure(0, weight=0)
         self.help_frame.rowconfigure(1, weight=1)
+        help.text= ("""
+Tutorial: Come utilizzare l'interfaccia di simulazione di un insulinometro
+
+Benvenuto! Questa guida ti aiuterà a familiarizzare con le funzionalità e l'utilizzo del programma.
+Segui questi passaggi per utilizzare al meglio l'applicazione.
+
+1. Avvio dell'applicazione
+   - Esegui il programma: Una volta avviato, si aprirà una finestra principale dell'interfaccia.
+   - Dimensioni della finestra: La finestra è ridimensionabile e si adatta ai diversi schermi, con una dimensione minima di 600x300 pixel.
+
+2. Connessione ai dispositivi BLE
+   - Il programma consente di comunicare con dispositivi Bluetooth Low Energy (BLE):
+     * Scansiona i dispositivi:
+       - Fai clic sul pulsante `Scan` nella finestra principale.
+       - L'applicazione cercherà i dispositivi BLE disponibili nelle vicinanze.
+     * Seleziona un dispositivo:
+       - Scegli dall’elenco il dispositivo BLE con cui desideri connetterti.
+       - Conferma la connessione per procedere.
+
+3. Inserimento dei parametri di simulazione
+   - Configura i parametri della simulazione utilizzando i campi di input:
+     * Tensione (Voltage):
+       - Inserisci il valore di tensione richiesto per la simulazione.
+     * Frequenza operativa (Frequency):
+       - Imposta la frequenza minima e massima.
+     * Numero di ripetizioni:
+       - Specifica quante volte desideri eseguire il test.
+
+4. Avvio della simulazione
+   - Dopo aver configurato i parametri, fai clic sul pulsante `Start Simulation`.
+   - L’applicazione elaborerà i dati e invierà le istruzioni al dispositivo BLE connesso (se applicabile).
+
+5. Monitoraggio dei risultati
+   - Visualizzazione in tempo reale:
+     * I dati raccolti o simulati verranno visualizzati su un grafico interattivo nella finestra principale.
+   - Log dei messaggi:
+     * Una sezione dedicata mostrerà lo storico dei comandi e delle risposte (utile per il debug o l’analisi).
+
+6. Funzioni aggiuntive
+   - Interrompere la simulazione:
+     * Usa il pulsante `Stop` per fermare la simulazione in corso.
+   - Esportazione dei dati (se implementato):
+     * Salva i risultati della simulazione per un’analisi successiva.
+
+7. Chiudere l’applicazione
+   - Per chiudere il programma, utilizza il pulsante `Exit` o chiudi la finestra direttamente.
+
+Suggerimenti utili:
+   - Assicurati di avere i permessi per il Bluetooth:
+     * L’applicazione necessita dell’accesso BLE per funzionare correttamente.
+   - Mantieni il dispositivo BLE vicino:
+     * La connessione può fallire se il dispositivo è troppo lontano.
+"""
+    )
+        # Widget di testo per visualizzare l'help
+        help_label = tk.Text(self.help_frame, wrap="word", bg="white", height=15)
+        help_label.insert("1.0", help.text)
+        help_label.config(state="disabled", font=("Arial", 12, "normal"))  # Modifica del font (Arial, 12pt, normale)
+        help_label.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=10, pady=10)
+
+        # Scrollbar per il widget di testo
+        scrollbar = ttk.Scrollbar(self.help_frame, orient="vertical", command=help_label.yview)
+        help_label.config(yscrollcommand=scrollbar.set)
+        scrollbar.grid(row=1, column=3, sticky="ns")
 
         # Tab per cambiare modalità (stesso layout degli altri frame)
         tab = tk.Frame(self.help_frame, height=60, bg="white")
@@ -423,8 +513,8 @@ class InsulinometroApp(tk.Tk):
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
         # Testo Help
-        help_label = tk.Label(self.help_frame, text="Help Section: qui si trova il testo di aiuto (Work in progress)", bg="lightyellow")
-        help_label.grid(column=0, row=1, columnspan=3, padx=20, pady=20, sticky="nesw")
+        #help_label = tk.Label(self.help_frame, text="Help Section: qui si trova il testo di aiuto (Work in progress)", bg="lightyellow")
+        #help_label.grid(column=0, row=1, columnspan=3, padx=20, pady=20, sticky="nesw")
 
     def show_frame(self, frame):
         """ Mostra il frame selezionato """
@@ -449,6 +539,22 @@ class InsulinometroApp(tk.Tk):
     
     def disconnect_button_click(self):
         print("Disconnect")
+        self.switch_bluetooth_frame(False)
+        global popup_scan_aperto
+        #Check chiusura pop-up scan
+        if popup_scan_aperto ==True:
+            self.popup_scan.destroy()
+            popup_scan_aperto = False
+        
+        global popup_dati_aperto
+        #Check chiusura pop-up dati server
+        if popup_dati_aperto==True:
+            self.popup_dati.destroy()
+            popup_dati_aperto = False
+
+        self.ble_address = 0
+        self.ble_name= "None"
+
 
     def start_button_click(self):
         print("Start")
@@ -458,16 +564,41 @@ class InsulinometroApp(tk.Tk):
 
         if(success == True):
             if self.ble_address != 0:
-                if self.is_device_connected == True:
-                    #TODO
-                    print(".")
-                else:
-                    print("Errore nella connessione al dispositivo")
+                #TODO
+                #LETTURA DAL SERVER
+                self.lettura_completata = False
+                self.lettura_fallita = False
+                data = asyncio.run(self.read_data(BleakClient(self.ble_address), CHARACTERISTIC_UUID_READ))
+                
+                while (self.lettura_completata == False) and (self.lettura_fallita == False):
+                    pass
+                
+                #VADO IN DATA
+                self.show_frame(self.data_frame)
+
+                #AGGIORNO GRAFICO E TABELLA CON VALORI LETTI
+                cont = 0
+
+                for element in data:
+                    cont = cont + 1
+                    self.x_values_BM.append(cont)
+                    self.y_values_BM.append(element)
+                    self.x_values_BF.append(cont)
+                    self.y_values_BF.append(element)
+                    self.x_values_N.append(cont)
+                    self.y_values_N.append(element)
+                    self.tree_indexes.append(cont)
+                    self.tree_values.append(element)
+                    
+
+                self.init_graph_and_tree()
+
+
             else:
                 #AREA TEST
                 #Passaggio alla schermata Data
                 self.show_frame(self.data_frame)
-                self.open_popup()   #Per eseguire il test sul plottaggio dei grafici
+                self.open_popup_input()   #Per eseguire il test sul plottaggio dei grafici
         
 
     def acquire_values(self):
@@ -577,6 +708,16 @@ class InsulinometroApp(tk.Tk):
     def saveData_button_click(self):
         print("Save Data")
 
+    def init_graph_and_tree(self):
+        self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
+        self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
+        self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
+
+        i = 0
+        for element in self.tree_indexes:
+            self.tree.insert("","end", values=(self.tree_indexes(i), self.tree_values(i)))
+            i = i + 1
+
     def update_graph(self, ax, canvas, x_values, y_values, title):
         #Aggiorno il grafico
         ax.clear()
@@ -620,32 +761,32 @@ class InsulinometroApp(tk.Tk):
            #Incremento il valore PROVVISORIO dell'ascissa
             self.ascissa=self.ascissa+1
 
-    def open_popup(self):
+    def open_popup_input(self):
         #Creazione del popup
-        popup = tk.Toplevel()
-        popup.title("Aggiunta valori ...")
+        self.popup_input = tk.Toplevel()
+        self.popup_input.title("Aggiunta valori ...")
 
 
         self.new_resistance= tk.StringVar()
         
 
-        Testo_popup=tk.Label(popup, text="Il nuovo valore della Resistenza (deve essere compreso tra 1 e 500 Ohm):")
+        Testo_popup=tk.Label(self.popup_input, text="Il nuovo valore della Resistenza (deve essere compreso tra 1 e 500 Ohm):")
         Testo_popup.pack(pady=10)
-        entry = tk.Entry(popup, textvariable=self.new_resistance)
+        entry = tk.Entry(self.popup_input, textvariable=self.new_resistance)
         entry.pack(pady=10, padx=5)
 
-        update_button = tk.Button(popup, text="Aggiorna", command=self.update_graph_and_tree)
+        update_button = tk.Button(self.popup_input, text="Aggiorna", command=self.update_graph_and_tree)
         update_button.pack(pady=10)
 
 
     
     def run_scanning(self):
-        global popup_aperto
-        if popup_aperto:
+        global popup_scan_aperto
+        if popup_scan_aperto:
             print("Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione")
             return
-        elif popup_aperto == False:
-            popup_aperto = True
+        elif popup_scan_aperto == False:
+            popup_scan_aperto = True
             print("Starting scanning...")
             thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_open_popup()))  # Esegui la scansione
             thread.start()
@@ -653,21 +794,22 @@ class InsulinometroApp(tk.Tk):
 
     def open_device_list_popup(self, devices):
         # Crea un nuovo popup
-        popup = tk.Toplevel(self)
-        popup.title("Dispositivi trovati")
-        popup.geometry("300x200")
+        self.popup_scan = tk.Toplevel(self)
+        self.popup_scan.title("Dispositivi trovati")
+        self.popup_scan.geometry("300x200")
 
         # Configura il layout del popup
-        popup.grid_rowconfigure(0, weight=1)  # Permette al Listbox di espandersi
-        popup.grid_rowconfigure(1, weight=0)
-        popup.grid_columnconfigure(0, weight=1)  # Permette al Listbox di espandersi
-        popup.columnconfigure(1, weight=1)
+        self.popup_scan.grid_rowconfigure(0, weight=1)  # Permette al Listbox di espandersi
+        self.popup_scan.grid_rowconfigure(1, weight=0)
+        self.popup_scan.grid_columnconfigure(0, weight=1)  # Permette al Listbox di espandersi
+        self.popup_scan.columnconfigure(1, weight=1)
 
-        # Variabile per memorizzare l'indirizzo MAC selezionato
+        # Variabile per memorizzare il nome e l'indirizzo MAC del dispositivo selezionato 
         self.selected_mac = tk.StringVar()
+        self.selected_name = tk.StringVar()
         
         # Crea un Listbox per mostrare i dispositivi
-        self.device_listbox = tk.Listbox(popup)
+        self.device_listbox = tk.Listbox(self.popup_scan)
         self.device_listbox.rowconfigure(0,weight=1)
         self.device_listbox.grid(row=0, columnspan=2, padx=5,pady=2,sticky='nesw')
             
@@ -680,6 +822,7 @@ class InsulinometroApp(tk.Tk):
                 # Ottieni l'indice della selezione
                 selected_index = self.device_listbox.curselection()[0]
                 selected_device = devices[selected_index]
+                self.selected_name.set(selected_device.name)
                 self.selected_mac.set(selected_device.address)
                 connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
             except IndexError:
@@ -691,7 +834,7 @@ class InsulinometroApp(tk.Tk):
         
         async def connect_to_device():
             mac_address = self.selected_mac.get()
-            self.ble_address = mac_address
+
             if not mac_address:
                 messagebox.showwarning("Errore", "Nessun dispositivo selezionato!")
                 return
@@ -702,38 +845,45 @@ class InsulinometroApp(tk.Tk):
                     connected = await client.is_connected()
                     if connected:
                         messagebox.showinfo("Successo", f"Connesso al dispositivo {mac_address}")
+                        self.ble_name = self.selected_name.get()
+                        self.ble_address = mac_address
                     else:
                         messagebox.showerror("Errore", f"Connessione fallita al dispositivo {mac_address}")
             except Exception as e:
                 messagebox.showerror("Errore", f"Errore durante la connessione: {e}")
 
         def connect_button_handler():
-            asyncio.run(connect_to_device())
+            #asyncio.run(connect_to_device())
+            self.open_popup_dati()
+            self.switch_bluetooth_frame(True)
 
         #Pulsante per aggiornare il pop up
-        update_button = tk.Button(popup, text="Aggiorna", command=self.update_device_listbox)
+        update_button = tk.Button(self.popup_scan, text="Aggiorna", command=self.update_device_listbox)
         update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
 
         #Pulsante per connettersi al dispositivo selezionato
-        connect_button = tk.Button(popup, text="Connetti", command=connect_button_handler)
+        connect_button = tk.Button(self.popup_scan, text="Connetti", command=connect_button_handler)
         connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
 
         #Funzione per la chiusura del popup affinché pop_aperto venga modificato
         def close_popup():
             print("Chiusura finestra bluetooth")
-            global popup_aperto
-            popup_aperto = False
-            popup.destroy()
+            global popup_scan_aperto
+            popup_scan_aperto = False
+            self.popup_scan.destroy()
+           
 
         
         #Affinché la variabile popup_aperto si modifichi anche se chiudo la finestra
-        popup.protocol("WM_DELETE_WINDOW", close_popup)
+        self.popup_scan.protocol("WM_DELETE_WINDOW", close_popup)
+
 
     def update_device_listbox(self):
             print("Starting scanning...")
             # Esegui una nuova scansione e aggiorna la lista
             thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_update()))  # Esegui la scansione
             thread.start()
+
 
     async def scan_for_devices_and_update(self):
             print("Scanning for devices...")
@@ -761,18 +911,37 @@ class InsulinometroApp(tk.Tk):
 #            print(f"Errore di connessione: {e}")
 #        return client
 
-    async def write_command(client, characteristic_uuid, command):
+    # Funzione per scrivere i dati
+    async def write_data(self, command):
+        """Scrivi i dati utilizzando un comando"""
+        try:
+            await self.write_command(self.client, self.characteristic_uuid, command)
+            print(f"Comando inviato: {command}")
+        except Exception as e:
+            print(f"Errore durante l'invio del comando: {e}")
+
+    async def write_command(self, client, characteristic_uuid, command):
+        """Invia un comando a una caratteristica GATT"""
         try:
             await client.write_gatt_char(characteristic_uuid, command)
             print(f"Comando inviato: {command}")
         except Exception as e:
             print(f"Errore durante l'invio del comando: {e}")
-    
-    async def start_device(self, client, characteristic_uuid):
-        command = b'\x01'  # 0x01 come comando per "start"
-        await self.write_command(client, characteristic_uuid, command)
-    
-    async def read_data(client, characteristic_uuid):
+
+    # Funzione per leggere i dati
+    async def read_data(self):
+        """Leggi i dati da una caratteristica GATT"""
+        try:
+            data = await self.read_command(self.client, self.characteristic_uuid)
+            print(f"Dati letti: {data}")
+            self.lettura_completata = True
+            return data
+        except Exception as e:
+            print(f"Errore durante la lettura dei dati: {e}")
+            self.lettura_fallita = True
+
+    async def read_command(self, client, characteristic_uuid):
+        """Leggi i dati da una caratteristica GATT"""
         try:
             data = await client.read_gatt_char(characteristic_uuid)
             print(f"Dati letti: {data}")
@@ -780,18 +949,108 @@ class InsulinometroApp(tk.Tk):
         except Exception as e:
             print(f"Errore durante la lettura dei dati: {e}")
 
-    def is_device_connected(address):
-        client = BleakClient(address)
+     # Funzione per scrivere i dati
+    async def write_data(self, command):
+        """Scrivi i dati utilizzando un comando"""
         try:
-            client.connect()
-            connected = client.is_connected
-            client.disconnect()
-            return connected
+            await self.write_command(self.client, self.characteristic_uuid, command)
+            print(f"Comando inviato: {command}")
         except Exception as e:
-            print(f"Errore: {e}")
-            return False
+            print(f"Errore durante l'invio del comando: {e}")
 
-    
+    async def write_command(self, client, characteristic_uuid, command):
+        """Invia un comando a una caratteristica GATT"""
+        try:
+            await client.write_gatt_char(characteristic_uuid, command)
+            print(f"Comando inviato: {command}")
+        except Exception as e:
+            print(f"Errore durante l'invio del comando: {e}")
+
+    # Funzione per leggere i dati
+    async def read_data(self):
+        """Leggi i dati da una caratteristica GATT"""
+        try:
+            data = await self.read_command(self.client, self.characteristic_uuid)
+            print(f"Dati letti: {data}")
+            return data
+        except Exception as e:
+            print(f"Errore durante la lettura dei dati: {e}")
+
+    async def read_command(self, client, characteristic_uuid):
+        """Leggi i dati da una caratteristica GATT"""
+        try:
+            data = await client.read_gatt_char(characteristic_uuid)
+            print(f"Dati letti: {data}")
+            return data
+        except Exception as e:
+            print(f"Errore durante la lettura dei dati: {e}")
+
+    def open_popup_dati(self):
+        # Crea la finestra di popup
+        self.popup_dati = tk.Toplevel()
+        self.popup_dati.title("Popup Dati")
+        self.popup_dati.geometry("400x300")
+        self.popup_dati.rowconfigure(0, weight=1)
+        self.popup_dati.columnconfigure(1, weight=1)
+
+        global popup_dati_aperto
+        popup_dati_aperto = True
+
+
+        # Frame per i dati
+        data_frame = ttk.LabelFrame(self.popup_dati, text="Dati")
+        data_frame.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
+
+        # Configurazione griglia
+        data_frame.rowconfigure(0, weight=1)
+        data_frame.rowconfigure(1, weight=0)
+        data_frame.columnconfigure(0, weight=1)
+        data_frame.columnconfigure(1, weight=1)
+
+        # Area di testo per inserire/leggere dati
+        self.data_text = tk.Text(data_frame, wrap="word", height=10, width=40)
+        self.data_text.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
+
+        # Funzione per leggere i dati dal dispositivo
+        async def on_read_data():
+            data = await self.read_data()  # Chiama la funzione di lettura async
+            self.data_text.delete("1.0", tk.END)  # Pulisci i dati precedenti
+            self.data_text.insert(tk.END, str(data))  # Mostra i nuovi dati letti
+
+        # Funzione per scrivere i dati
+        async def on_write_data():
+            command = b'\x01'  # Esempio di comando
+            await self.write_data(command)  # Chiama la funzione di scrittura async
+
+        # Pulsante per leggere i dati
+        read_button = ttk.Button(data_frame, text="Leggi Dati", command=lambda: asyncio.run(on_read_data()))
+        read_button.grid(column=0, row=1, padx=10, pady=5, sticky="nesw")
+
+        # Pulsante per scrivere i dati
+        write_button = ttk.Button(data_frame, text="Scrivi Dati", command=lambda: asyncio.run(on_write_data()))
+        write_button.grid(column=1, row=1, padx=10, pady=5, sticky="nesw")
+
+        def close_popup_data():
+            print("Chiusura finestra dati")
+            global popup_dati_aperto
+            popup_dati_aperto = False
+            self.popup_dati.destroy()
+
+        self.popup_dati.protocol("WM_DELETE_WINDOW", close_popup_data)
+
+            
+
+    def switch_bluetooth_frame(self, status):
+        if status == True:
+            self.disconnected_bluetooth_frame.grid_forget()
+            self.connected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+        else:
+            self.connected_bluetooth_frame.grid_forget()
+            self.disconnected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+            
+            
+
+
 
 if __name__ == "__main__":
     app = InsulinometroApp()
