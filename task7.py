@@ -8,6 +8,8 @@ import asyncio
 import threading
 from bleak import BleakClient
 import math
+import random
+import time
 
 SERVICE_UUID = "12345678_1234_5678_1234_56789abcdef0"
 CHARACTERISTIC_UUID_READ = "12345678_1234_5678_1234_56789abcdef1"
@@ -30,6 +32,8 @@ class InsulinometroApp(tk.Tk):
 
         self.ble_address = 0
         self.ble_name = "None"
+
+        self.plotting = False
 
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
@@ -70,6 +74,7 @@ class InsulinometroApp(tk.Tk):
         # Mostra il frame "home" inizialmente
         self.show_frame(self.home_frame)
 
+#Funzioni creazione e update Frame
     def create_home_frame(self):
 
         self.grid_propagate(False)
@@ -351,6 +356,8 @@ class InsulinometroApp(tk.Tk):
         self.fig_BM.subplots_adjust(top=0.83, bottom = 0.17)
         self.ax_BM = self.fig_BM.add_subplot(111)
         self.ax_BM.set_title("Modulo")
+        # Aggiunta della griglia
+        self.ax_BM.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')  # Griglia personalizzata
         self.canvas_BM = FigureCanvasTkAgg(self.fig_BM, self.data_frame)
         self.canvas_widget_BM = self.canvas_BM.get_tk_widget()
         self.canvas_widget_BM.grid(column=0, row=2, padx=10, pady=2, sticky="nesw")
@@ -363,6 +370,7 @@ class InsulinometroApp(tk.Tk):
         self.fig_BF.subplots_adjust(top=0.83,bottom=0.17)
         self.ax_BF = self.fig_BF.add_subplot(111)
         self.ax_BF.set_title("Fase")
+        self.ax_BF.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')  # Griglia personalizzata
         self.canvas_BF = FigureCanvasTkAgg(self.fig_BF, self.data_frame)
         self.canvas_widget_BF = self.canvas_BF.get_tk_widget()
         self.canvas_widget_BF.grid(column=0, row=3, padx=10, pady=2, sticky="nesw")
@@ -398,6 +406,7 @@ class InsulinometroApp(tk.Tk):
 
         self.fig_N = Figure()
         self.ax_N = self.fig_N.add_subplot(111)
+        self.ax_N.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')  # Griglia personalizzata
         self.canvas_N = FigureCanvasTkAgg(self.fig_N, self.data_frame)
         self.canvas_widget_N = self.canvas_N.get_tk_widget()
         self.canvas_widget_N.grid(column=1, row=2, rowspan=2, padx=10, pady=2, sticky="nesw")
@@ -406,14 +415,52 @@ class InsulinometroApp(tk.Tk):
         self.canvas_BF.mpl_connect('button_press_event', self.connect_click_marker)
         self.canvas_N.mpl_connect('button_press_event', self.connect_click_marker)
 
-        # Tabella
+        # Creazione delle Tabelle
+        #Tab per switchare tra le tabelle
+        notebook = ttk.Notebook(self.data_frame)
+        notebook.grid(column=1, row=4, padx=10, pady=2, sticky="nesw")
+
+        # Scheda per tutti i punti
+        self.all_points_frame = ttk.Frame(notebook)
+        notebook.add(self.all_points_frame, text="Tutti i Punti")
+
+        # Scheda per i marker sui grafici di Bode
+        self.Bode_markers_frame = ttk.Frame(notebook)
+        notebook.add(self.Bode_markers_frame, text="Bode Markers")
+
+        # Scheda per i marker sui grafici di Nyquist
+        self.Nyquist_markers_frame = ttk.Frame(notebook)
+        notebook.add(self.Nyquist_markers_frame, text="Nyquist Markers")
+
+        #Tabella per i punti
         self.columns=('index', 'value')
-        self.tree = ttk.Treeview(self.data_frame, columns=self.columns, height =4, show='headings')
-        self.tree.grid(column=1, row=4, padx=10, pady=2, sticky="nesw")
+        self.tree = ttk.Treeview(self.all_points_frame, columns=self.columns, height =4, show='headings')
+        self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree.heading('index', text ='Index')
         self.tree.heading('value', text ='Resistance(Ohm)')
         self.tree_indexes = []
         self.tree_values = []
+
+
+
+        #Tabella per i marker sui grafici di Bode
+        self.columns_B=('Frequency', 'Amplitude', 'Phase')
+        self.Bode_markers_tree = ttk.Treeview(self.Bode_markers_frame, columns=self.columns_B, height =4, show='headings')
+        self.Bode_markers_tree.grid(row=0, column=0, sticky="nsew")
+        self.Bode_markers_tree.heading('Frequency', text ='Frequency')
+        self.Bode_markers_tree.heading('Amplitude', text ='Amplitude')
+        self.Bode_markers_tree.heading('Phase', text ='Phase')
+        self.Bode_markers_tree_indexes = []
+        self.Bode_markers_tree_values = []
+        
+        #Tabella per i marker sul grafico di Nyquist
+        self.columns_N=('Real', 'Immaginary')
+        self.Nyquist_markers_tree = ttk.Treeview(self.Nyquist_markers_frame, columns=self.columns_N, height =4, show='headings')
+        self.Nyquist_markers_tree.grid(row=0, column=0, sticky="nsew")
+        self.Nyquist_markers_tree.heading('Real', text ='Real Part')
+        self.Nyquist_markers_tree.heading('Immaginary', text ='Immaginary Part')
+        self.Nyquist_markers_tree_indexes = []
+        self.Nyquist_markers_tree_values = []
 
         # Activity Log at the bottom (spans across both columns)
         activity_log = tk.Frame(self.data_frame, bg="grey")
@@ -435,15 +482,17 @@ class InsulinometroApp(tk.Tk):
         self.help_frame.rowconfigure(0, weight=0)
         self.help_frame.rowconfigure(1, weight=1)
         help.text= ("""
-Tutorial: Come utilizzare l'interfaccia di simulazione di un insulinometro
+Help Section: Come utilizzare l'interfaccia di simulazione di un insulinometro
 
 Benvenuto! Questa guida ti aiuterà a familiarizzare con le funzionalità e l'utilizzo del programma.
 Segui questi passaggi per utilizzare al meglio l'applicazione.
 
 1. Avvio dell'applicazione
    - Esegui il programma: Una volta avviato, si aprirà una finestra principale dell'interfaccia.
-   - Dimensioni della finestra: La finestra è ridimensionabile e si adatta ai diversi schermi, con una dimensione minima di 600x300 pixel.
-
+   - Il programma è strutturato su 3 tab: Home,Data ed Help (in cui ti trovi).
+     Nella home vedrai le funzionalità principali dell'interfaccia,spiegate di seguito;
+     Nella schermata 'data' vedrai le info relative ai grafici plottati sulla misurazione.
+                    
 2. Connessione ai dispositivi BLE
    - Il programma consente di comunicare con dispositivi Bluetooth Low Energy (BLE):
      * Scansiona i dispositivi:
@@ -453,30 +502,44 @@ Segui questi passaggi per utilizzare al meglio l'applicazione.
        - Scegli dall’elenco il dispositivo BLE con cui desideri connetterti.
        - Conferma la connessione per procedere.
 
-3. Inserimento dei parametri di simulazione
-   - Configura i parametri della simulazione utilizzando i campi di input:
+3. Inserimento dei parametri di simulazione e modalità operativa
+    A)Scegli il tipo di modalità operativa:
+        * Single mode: 
+        -Misurazioni effettuate su frequenza singola scelta.
+        * Sweep mode:
+        -Misurazioni effettuate su numero di ripetizioni scelte tra minimo a massimo di frequenza.
+    B)Configura i parametri della simulazione utilizzando i campi di input:
      * Tensione (Voltage):
-       - Inserisci il valore di tensione richiesto per la simulazione.
-     * Frequenza operativa (Frequency):
-       - Imposta la frequenza minima e massima.
+       - Inserisci il valore di tensione richiesto per la simulazione (compreso tra 10mV e 500 mV).
+     * Frequenza operativa (Frequency) tra 1Hz e 100khz:
+       - Imposta la frequenza singola (single mode) o quella minima e massima (sweep mode).
      * Numero di ripetizioni:
-       - Specifica quante volte desideri eseguire il test.
+       - Specifica quante volte desideri eseguire il test (solo per sweep mode) inserendo un valore minore della 
+         differenza tra massima e minima frequenza.
 
 4. Avvio della simulazione
-   - Dopo aver configurato i parametri, fai clic sul pulsante `Start Simulation`.
-   - L’applicazione elaborerà i dati e invierà le istruzioni al dispositivo BLE connesso (se applicabile).
+   - Dopo aver configurato i parametri, fai clic sul pulsante `Start ` per avviare la simulazione.
+   - Se connessa ad un dispositivo BLE, l’applicazione elaborerà i dati e invierà le istruzioni ad esso.
+     In vaso contrario sarà avviata una simulazione inserendo manualmente i valori di resistenza tra 1 Ohm e 500 Ohm.
 
 5. Monitoraggio dei risultati
-   - Visualizzazione in tempo reale:
-     * I dati raccolti o simulati verranno visualizzati su un grafico interattivo nella finestra principale.
-   - Log dei messaggi:
-     * Una sezione dedicata mostrerà lo storico dei comandi e delle risposte (utile per il debug o l’analisi).
+    * Visualizzazione in tempo reale:
+     -I dati raccolti o simulati verranno visualizzati su un grafico interattivo nella finestra data.
+                    
+    * Aggiunta di Marker
+    - Su ogni punto del grafico è possibile aggiungere un Marker (contrassegnandolo con un cerchio rosso ) , per farlo:
+        1)Clicca sul pulsante 'Add Marker' (spunterà una voce 'enabled');
+        2)Clicca sul punto del grafico di interesse (se il clic non avviene correttamente apparirà un errore);
+        3)Puoi interrompere la fase di "aggiunta Marker" cliccando nuovamente 
+          sul tasto 'Add Marker' (dovrebbe spuntare la voce 'disabled'.)
+   * Log dei messaggi:
+     - Una sezione dedicata mostrerà lo storico dei comandi e delle risposte (utile per il debug o l’analisi).
 
 6. Funzioni aggiuntive
    - Interrompere la simulazione:
-     * Usa il pulsante `Stop` per fermare la simulazione in corso.
-   - Esportazione dei dati (se implementato):
-     * Salva i risultati della simulazione per un’analisi successiva.
+     * Usa il pulsante `Stop` per fermare la raccolta dati in corso (solo se connessi).
+   - Esportazione dei dati :
+     * Salva i risultati della simulazione in un file .csv o .txt per un’analisi successiva.
 
 7. Chiudere l’applicazione
    - Per chiudere il programma, utilizza il pulsante `Exit` o chiudi la finestra direttamente.
@@ -518,15 +581,19 @@ Suggerimenti utili:
         btn_help = tk.Button(tab, text="Help", command=self.help_button_click, height=2, width=10, bg= "gray")
         btn_help.grid(column=2, row=0, sticky="nesw", padx=10, pady=2)
 
-        # Testo Help
-        #help_label = tk.Label(self.help_frame, text="Help Section: qui si trova il testo di aiuto (Work in progress)", bg="lightyellow")
-        #help_label.grid(column=0, row=1, columnspan=3, padx=20, pady=20, sticky="nesw")
-
     def show_frame(self, frame):
         """ Mostra il frame selezionato """
         frame.tkraise()
-        
-    #Funzioni dei Bottoni 
+    
+    def switch_bluetooth_frame(self, status):
+        if status == True:
+            self.disconnected_bluetooth_frame.grid_forget()
+            self.connected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+        else:
+            self.connected_bluetooth_frame.grid_forget()
+            self.disconnected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
+ 
+ #Funzioni dei Bottoni 
     def home_button_click(self):
         self.show_frame(self.home_frame)
         print("Home")
@@ -602,7 +669,10 @@ Suggerimenti utili:
                 #AREA TEST
                 #Passaggio alla schermata Data
                 self.show_frame(self.data_frame)
-                self.open_popup_input()   #Per eseguire il test sul plottaggio dei grafici
+                #self.open_popup_input()   #Per eseguire il test sul plottaggio dei grafici
+                self.plotting = True
+                thread = threading.Thread(target=lambda: asyncio.run(self.read_and_plot_live()))  # Esegui la scansione
+                thread.start()
         
     def acquire_values(self):
         success = False
@@ -706,6 +776,7 @@ Suggerimenti utili:
 
     def stop_button_click(self):
         print("Stop")
+        self.plotting = False
 
     def toggle_add_marker(self):
         """Alterna lo stato di add_marker_enabled quando il pulsante viene premuto."""
@@ -718,7 +789,21 @@ Suggerimenti utili:
 
     def saveData_button_click(self):
         print("Save Data")
-        
+
+    def update_button_click(self):
+        #Cattura del valore della resistenza inserito dal popup
+        try:
+            resistance=float(self.new_resistance.get())
+            if (resistance < 1 or resistance > 500):
+                    raise ValueError("il valore della rsistenza deve essere compreso tra 1 Ohm e 500 Ohm")
+        except ValueError as e:
+                print("Error:",e)
+                print("Reinserire il valore")
+                messagebox.showerror("Errore", e)
+        else:
+            self.update_graph_and_tree(resistance)
+
+#Funzioni Inizializzazione e modifica grafici      
     def init_graph_and_tree(self):
         self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
         self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
@@ -732,47 +817,107 @@ Suggerimenti utili:
     def update_graph(self, ax, canvas, x_values, y_values, title):
         #Aggiorno il grafico
         ax.clear()
-        ax.plot(x_values, y_values, marker = 'o')
+        ax.plot(x_values, y_values, marker = '.')
         ax.set_title(title)
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5, color='gray')  # Griglia personalizzata
         canvas.draw_idle()
 
-    def update_graph_and_tree(self):
-        #Cattura del valore della resistenza inserito dal popup
-        try:
-            resistance=float(self.new_resistance.get())
-            if (resistance < 1 or resistance > 500):
-                    raise ValueError("il valore della rsistenza deve essere compreso tra 1 Ohm e 500 Ohm")
-        except ValueError as e:
-                print("Error:",e)
-                print("Reinserire il valore")
-                messagebox.showerror("Errore", e)
-        else:
+    def update_graph_and_tree(self, new_value):
+        #Aggiorno la tabbella
+        self.tree.insert("","end", values=(self.ascissa, new_value))
+
+        #Aggiorno i gragici
+        #Bode Modulo
+        self.x_values_BM.append(self.ascissa)   #DA MODIFICARE
+        self.y_values_BM.append(new_value)     #DA MODIFICARE
+
+        self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
             
-            #Aggiorno la tabbella
-            self.tree.insert("","end", values=(self.ascissa, resistance))
+        #Bode Fase
+        self.x_values_BF.append(self.ascissa)   #DA MODIFICARE
+        self.y_values_BF.append(new_value)     #DA MODIFICARE
 
-            #Aggiorno i gragici
-            #Bode Modulo
-            self.x_values_BM.append(self.ascissa)   #DA MODIFICARE
-            self.y_values_BM.append(resistance)     #DA MODIFICARE
+        self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
 
-            self.update_graph(self.ax_BM, self.canvas_BM, self.x_values_BM, self.y_values_BM, "Modulo")
-            
-            #Bode Fase
-            self.x_values_BF.append(self.ascissa)   #DA MODIFICARE
-            self.y_values_BF.append(resistance)     #DA MODIFICARE
+        #Nyquist
+        self.x_values_N.append(self.ascissa)    #DA MODIFICARE
+        self.y_values_N.append(new_value)      #DA MODIFICARE
 
-            self.update_graph(self.ax_BF, self.canvas_BF, self.x_values_BF, self.y_values_BF, "Fase")
+        self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
 
-            #Nyquist
-            self.x_values_N.append(self.ascissa)    #DA MODIFICARE
-            self.y_values_N.append(resistance)      #DA MODIFICARE
+        #Incremento il valore PROVVISORIO dell'ascissa
+        self.ascissa=self.ascissa+1
 
-            self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
+    def connect_click_marker(self, event):
+        """Metodo riutilizzabile per gestire il clic su un grafico."""
+        if not self.add_marker_enabled:
+            return  # Se la modalità non è attivata, non fare nulla
 
-           #Incremento il valore PROVVISORIO dell'ascissa
-            self.ascissa=self.ascissa+1
+        # Verifica su quale grafico è stato fatto il clic
+        if event.inaxes == self.ax_BM or event.inaxes == self.ax_BF:
 
+            pointM = self.add_marker(self.canvas_BM, self.x_values_BM, self.y_values_BM, self.ax_BM, event)
+            pointF = self.add_marker(self.canvas_BF, self.x_values_BF, self.y_values_BF, self.ax_BF, event)
+
+            if (pointM is not None) and (pointF is not None):
+                frequency = pointM[0]
+                amplitude = pointM[1]
+                phase = pointF[1]
+                self.Bode_markers_tree.insert("", "end", values=(frequency, amplitude, phase))
+
+        elif event.inaxes == self.ax_N:
+            pointN = self.add_marker(self.canvas_N, self.x_values_N, self.y_values_N, self.ax_N, event)
+
+            if pointN is not None:
+                real = pointN[0]
+                immaginary = pointN[1]
+                self.Nyquist_markers_tree.insert("", "end", values=(real, immaginary))
+
+    def add_marker(self, canvas, x_data, y_data, ax, event):
+        """Aggiungi il marker solo se il clic è vicino ai punti esistenti nel grafico."""
+        x_click = event.xdata
+        y_click = event.ydata
+
+        if x_click is None or y_click is None:
+            print("Clic fuori dal grafico")
+            return None
+
+        # Distanza minima per considerare "vicino"
+        threshold = 10  # Puoi regolare questo valore in base alla densità dei punti
+
+        # Trova il punto più vicino tra i punti definiti
+        closest_point = None
+        min_distance = float('inf')  # Inizialmente impostata a infinito
+
+        for i in range(len(x_data)):
+            # Calcola la distanza euclidea tra il clic e il punto corrente
+            #Ciao Manu
+            distance = math.sqrt((x_data[i] - x_click) ** 2 + (y_data[i] - y_click) ** 2)
+            if distance < min_distance and distance <= threshold:
+                min_distance = distance
+                closest_point = (x_data[i], y_data[i])
+
+        if closest_point:
+        # Posiziona il marker esattamente sul punto trovato
+            print(f"Aggiunto marker su {closest_point}")
+            ax.plot(closest_point[0], closest_point[1], 'ro')  # Marker rosso
+
+            # Aggiorna il grafico
+            canvas.draw_idle()
+            return closest_point
+
+        # Mostra il messaggio di errore se il clic non è abbastanza vicino a nessun punto
+        self.show_incorrect_mark()
+        return None
+
+    def show_incorrect_mark(self):
+        """Mostra un pop-up di errore se il clic non è preciso."""
+        messagebox.showerror(
+        "Errore", 
+        "Clic troppo lontano dai punti esistenti!\nPer favore, clicca più vicino a un punto del grafico."
+    )
+
+    #Funzioni di apertura popup
     def open_popup_input(self):
         #Creazione del popup
         self.popup_input = tk.Toplevel()
@@ -787,21 +932,62 @@ Suggerimenti utili:
         entry = tk.Entry(self.popup_input, textvariable=self.new_resistance)
         entry.pack(pady=10, padx=5)
 
-        update_button = tk.Button(self.popup_input, text="Aggiorna", command=self.update_graph_and_tree)
+        update_button = tk.Button(self.popup_input, text="Aggiorna", command=self.update_button_click)
         update_button.pack(pady=10)
 
-    def run_scanning(self):
-        global popup_scan_aperto
-        if popup_scan_aperto:
-            print("Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione")
-            return
-        elif popup_scan_aperto == False:
-            popup_scan_aperto = True
-            self.open_device_list_popup()
-            print("Starting scanning...")
-            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_update()))  # Esegui la scansione
-            thread.start()
-            
+    def open_popup_dati(self):
+        # Crea la finestra di popup
+        self.popup_dati = tk.Toplevel()
+        self.popup_dati.title("Popup Dati")
+        self.popup_dati.geometry("400x300")
+        self.popup_dati.rowconfigure(0, weight=1)
+        self.popup_dati.columnconfigure(1, weight=1)
+
+        global popup_dati_aperto
+        popup_dati_aperto = True
+
+
+        # Frame per i dati
+        data_frame = ttk.LabelFrame(self.popup_dati, text="Dati")
+        data_frame.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
+
+        # Configurazione griglia
+        data_frame.rowconfigure(0, weight=1)
+        data_frame.rowconfigure(1, weight=0)
+        data_frame.columnconfigure(0, weight=1)
+        data_frame.columnconfigure(1, weight=1)
+
+        # Area di testo per inserire/leggere dati
+        self.data_text = tk.Text(data_frame, wrap="word", height=10, width=40)
+        self.data_text.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
+
+        # Funzione per leggere i dati dal dispositivo
+        async def on_read_data():
+            data = await self.read_data()  # Chiama la funzione di lettura async
+            self.data_text.delete("1.0", tk.END)  # Pulisci i dati precedenti
+            self.data_text.insert(tk.END, str(data))  # Mostra i nuovi dati letti
+
+        # Funzione per scrivere i dati
+        async def on_write_data():
+            command = b'\x01'  # Esempio di comando
+            await self.write_data(command)  # Chiama la funzione di scrittura async
+
+        # Pulsante per leggere i dati
+        read_button = ttk.Button(data_frame, text="Leggi Dati", command=lambda: asyncio.run(on_read_data()))
+        read_button.grid(column=0, row=1, padx=10, pady=5, sticky="nesw")
+
+        # Pulsante per scrivere i dati
+        write_button = ttk.Button(data_frame, text="Scrivi Dati", command=lambda: asyncio.run(on_write_data()))
+        write_button.grid(column=1, row=1, padx=10, pady=5, sticky="nesw")
+
+        def close_popup_data():
+            print("Chiusura finestra dati")
+            global popup_dati_aperto
+            popup_dati_aperto = False
+            self.popup_dati.destroy()
+
+        self.popup_dati.protocol("WM_DELETE_WINDOW", close_popup_data)
+
     def open_device_list_popup(self):
         # Crea un nuovo popup
         self.popup_scan = tk.Toplevel(self)
@@ -890,7 +1076,20 @@ Suggerimenti utili:
         
         #Affinché la variabile popup_aperto si modifichi anche se chiudo la finestra
         self.popup_scan.protocol("WM_DELETE_WINDOW", close_popup)
-
+   
+#Funzioni implementative logica Server-Client
+    def run_scanning(self):
+        global popup_scan_aperto
+        if popup_scan_aperto:
+            print("Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione")
+            return
+        elif popup_scan_aperto == False:
+            popup_scan_aperto = True
+            self.open_device_list_popup()
+            print("Starting scanning...")
+            thread = threading.Thread(target=lambda: asyncio.run(self.scan_for_devices_and_update()))  # Esegui la scansione
+            thread.start()
+            
     def update_device_listbox(self):
             print("Starting scanning...")
             # Esegui una nuova scansione e aggiorna la lista
@@ -909,6 +1108,18 @@ Suggerimenti utili:
             for device in self.found_devices:
                 self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi i nuovi dispositivi
 
+    async def read_and_plot_live(self):
+        while(self.plotting == True):
+            self.new_resistance = random.randint(1, 500)
+            self.update_graph_and_tree(self.new_resistance)
+            if(self.mode == "Single Mode"):
+                frequency = int(self.frequency_str.get())
+                time.sleep(1 / frequency)
+            else:
+                frequency = int(self.mfrequency_str.get())
+                time.sleep(1 / frequency)
+
+#Funzione per connessione funzionante ma non implementata causa limitazioni hardware/software
     #async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
 #        client = BleakClient(address)
 #        try:
@@ -991,118 +1202,6 @@ Suggerimenti utili:
             return data
         except Exception as e:
             print(f"Errore durante la lettura dei dati: {e}")
-
-    def open_popup_dati(self):
-        # Crea la finestra di popup
-        self.popup_dati = tk.Toplevel()
-        self.popup_dati.title("Popup Dati")
-        self.popup_dati.geometry("400x300")
-        self.popup_dati.rowconfigure(0, weight=1)
-        self.popup_dati.columnconfigure(1, weight=1)
-
-        global popup_dati_aperto
-        popup_dati_aperto = True
-
-
-        # Frame per i dati
-        data_frame = ttk.LabelFrame(self.popup_dati, text="Dati")
-        data_frame.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
-
-        # Configurazione griglia
-        data_frame.rowconfigure(0, weight=1)
-        data_frame.rowconfigure(1, weight=0)
-        data_frame.columnconfigure(0, weight=1)
-        data_frame.columnconfigure(1, weight=1)
-
-        # Area di testo per inserire/leggere dati
-        self.data_text = tk.Text(data_frame, wrap="word", height=10, width=40)
-        self.data_text.grid(column=0, row=0, columnspan=2, padx=10, pady=5, sticky="nesw")
-
-        # Funzione per leggere i dati dal dispositivo
-        async def on_read_data():
-            data = await self.read_data()  # Chiama la funzione di lettura async
-            self.data_text.delete("1.0", tk.END)  # Pulisci i dati precedenti
-            self.data_text.insert(tk.END, str(data))  # Mostra i nuovi dati letti
-
-        # Funzione per scrivere i dati
-        async def on_write_data():
-            command = b'\x01'  # Esempio di comando
-            await self.write_data(command)  # Chiama la funzione di scrittura async
-
-        # Pulsante per leggere i dati
-        read_button = ttk.Button(data_frame, text="Leggi Dati", command=lambda: asyncio.run(on_read_data()))
-        read_button.grid(column=0, row=1, padx=10, pady=5, sticky="nesw")
-
-        # Pulsante per scrivere i dati
-        write_button = ttk.Button(data_frame, text="Scrivi Dati", command=lambda: asyncio.run(on_write_data()))
-        write_button.grid(column=1, row=1, padx=10, pady=5, sticky="nesw")
-
-        def close_popup_data():
-            print("Chiusura finestra dati")
-            global popup_dati_aperto
-            popup_dati_aperto = False
-            self.popup_dati.destroy()
-
-        self.popup_dati.protocol("WM_DELETE_WINDOW", close_popup_data)
-
-    def switch_bluetooth_frame(self, status):
-        if status == True:
-            self.disconnected_bluetooth_frame.grid_forget()
-            self.connected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
-        else:
-            self.connected_bluetooth_frame.grid_forget()
-            self.disconnected_bluetooth_frame.grid(column=0, row=1, columnspan=1, rowspan=2, padx=10, pady=2, sticky="nesw")
-            
-    def connect_click_marker(self, event):
-        """Metodo riutilizzabile per gestire il clic su un grafico."""
-        if not self.add_marker_enabled:
-            return  # Se la modalità non è attivata, non fare nulla
-
-        # Verifica su quale grafico è stato fatto il clic
-        if event.inaxes == self.ax_BM:
-            self.add_marker(self.canvas_BM,self.x_values_BM, self.y_values_BM, self.ax_BM, event)
-        elif event.inaxes == self.ax_BF:
-            self.add_marker(self.canvas_BF,self.x_values_BF, self.y_values_BF, self.ax_BF, event)
-        elif event.inaxes == self.ax_N:
-            self.add_marker(self.canvas_N,self.x_values_N, self.y_values_N, self.ax_N, event)
-
-    def add_marker(self,canvas,x_data, y_data, ax, event):
-        """Aggiungi il marker solo se il clic è vicino ai punti esistenti nel grafico."""
-        x_click = event.xdata
-        y_click = event.ydata
-
-        if x_click is None or y_click is None:
-            print("Clic fuori dal grafico")
-            return
-
-        # Distanza minima per considerare "vicino"
-        threshold = 1
-
-        # Trova il punto più vicino tra i punti definiti
-        closest_point = None
-        min_distance = float('inf')
-
-        for i in range(len(x_data)):
-            distance = math.sqrt((x_data[i] - x_click) ** 2 + (y_data[i] - y_click) ** 2)
-            if distance < min_distance and distance < threshold:
-                min_distance = distance
-                closest_point = (x_data[i], y_data[i])
-
-        if closest_point:
-            # Posiziona il marker esattamente sul punto trovato
-            print(f"Aggiunto marker su {closest_point}")
-            ax.plot(closest_point[0], closest_point[1], 'ro')  # Marker rosso
-
-            # Rende il grafico interattivo
-            canvas.draw_idle()
-           
-        else:
-            # Mostra il messaggio di errore se il clic non è abbastanza vicino a nessun punto
-            self.show_incorrect_mark()
-
-    def show_incorrect_mark(self):
-        """Mostra un pop-up di errore se il clic non è preciso."""
-        messagebox.showerror("Errore", "Clic troppo lontano dai punti esistenti!\nPer favore, clicca più vicino a un punto del grafico.")
 
 if __name__ == "__main__":
     app = InsulinometroApp()
