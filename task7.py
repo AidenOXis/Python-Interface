@@ -1129,6 +1129,7 @@ Suggerimenti utili per la connessione:
         global popup_scan_aperto
         if popup_scan_aperto:
             print("Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione")
+            messagebox.showerror("Error","Finestra Bluetooth già aperta, chiudere la finestra prima di effettuare un'altra scansione!")
             return
         elif popup_scan_aperto == False:
             popup_scan_aperto = True
@@ -1258,4 +1259,3 @@ Suggerimenti utili per la connessione:
 if __name__ == "__main__":
     app = InsulinometroApp()
     app.mainloop()
-
