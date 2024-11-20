@@ -650,33 +650,35 @@ Suggerimenti utili per la connessione:
 
         if(success == True):
             if self.ble_address != 0:
-                #LETTURA DAL SERVER
-                self.lettura_completata = False
-                self.lettura_fallita = False
-                data = asyncio.run(self.read_data(BleakClient(self.ble_address), CHARACTERISTIC_UUID_READ))
+                messagebox.showerror("Errore", "Connessione ancora non possibile, disconnettersi e provare la simulazione" )
                 
-                while (self.lettura_completata == False) and (self.lettura_fallita == False):
-                    pass
+                #LETTURA DAL SERVER
+                #self.lettura_completata = False
+                #self.lettura_fallita = False
+                #data = asyncio.run(self.read_data())
+                
+                #while (self.lettura_completata == False) and (self.lettura_fallita == False):
+                    #pass
                 
                 #VADO IN DATA
-                self.show_frame(self.data_frame)
+                #self.show_frame(self.data_frame)
 
                 #AGGIORNO GRAFICO E TABELLA CON VALORI LETTI
-                cont = 0
+                #cont = 0
 
-                for element in data:
-                    cont = cont + 1
-                    self.x_values_BM.append(cont)
-                    self.y_values_BM.append(element)
-                    self.x_values_BF.append(cont)
-                    self.y_values_BF.append(element)
-                    self.x_values_N.append(cont)
-                    self.y_values_N.append(element)
-                    self.tree_indexes.append(cont)
-                    self.tree_values.append(element)
+                #for element in data:
+                    #cont = cont + 1
+                    #self.x_values_BM.append(cont)
+                    #self.y_values_BM.append(element)
+                    #self.x_values_BF.append(cont)
+                    #self.y_values_BF.append(element)
+                    #self.x_values_N.append(cont)
+                    #self.y_values_N.append(element)
+                    #self.tree_indexes.append(cont)
+                    #self.tree_values.append(element)
                     
 
-                self.init_graph_and_tree()
+                #self.init_graph_and_tree()
 
 
             else:
@@ -1059,10 +1061,10 @@ Suggerimenti utili per la connessione:
                 selected_device = self.found_devices[selected_index]
                 self.selected_name.set(selected_device.name)
                 self.selected_mac.set(selected_device.address)
-                connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
+                self.connect_button.config(state=tk.NORMAL)  # Abilita il pulsante Connetti
             except IndexError:
                 self.selected_mac.set("")
-                connect_button.config(state=tk.DISABLED)  # Disabilita il pulsante Connetti
+                self.connect_button.config(state=tk.DISABLED)  # Disabilita il pulsante Connetti
 
         # Associa la funzione di selezione alla Listbox
         self.device_listbox.bind("<<ListboxSelect>>", update_selected_mac)
@@ -1107,8 +1109,8 @@ Suggerimenti utili per la connessione:
         self.update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
 
         #Pulsante per connettersi al dispositivo selezionato
-        connect_button = tk.Button(self.popup_scan, text="Connetti", command=connect_button_handler)
-        connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
+        self.connect_button = tk.Button(self.popup_scan, text="Connetti", command=connect_button_handler)
+        self.connect_button.grid(row=1, column=0, padx=10, pady=5, sticky="nesw")  
 
         #Funzione per la chiusura del popup affinché pop_aperto venga modificato
         def close_popup():
@@ -1145,6 +1147,7 @@ Suggerimenti utili per la connessione:
             self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
             self.device_listbox.insert(tk.END, "Scanning for devices...")
             self.update_button.config(state=tk.DISABLED)
+            self.connect_button.config(state=tk.DISABLED)
 
             print("Scanning for devices...")
             self.found_devices = await BleakScanner.discover()  # Scansione dei dispositivi
@@ -1154,6 +1157,7 @@ Suggerimenti utili per la connessione:
             for device in self.found_devices:
                 self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi i nuovi dispositivi
             self.update_button.config(state=tk.NORMAL)
+            self.connect_button.config(state=tk.NORMAL)
 
 
     async def read_and_plot_live(self):
@@ -1254,3 +1258,4 @@ Suggerimenti utili per la connessione:
 if __name__ == "__main__":
     app = InsulinometroApp()
     app.mainloop()
+
