@@ -35,6 +35,8 @@ class InsulinometroApp(tk.Tk):
 
         self.plotting = False
 
+        self.connected = False
+
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
         self.frequency_str = tk.StringVar()
@@ -450,8 +452,9 @@ class InsulinometroApp(tk.Tk):
         self.Bode_markers_tree.heading('Frequency', text ='Frequency')
         self.Bode_markers_tree.heading('Amplitude', text ='Amplitude')
         self.Bode_markers_tree.heading('Phase', text ='Phase')
-        self.Bode_markers_tree_indexes = []
-        self.Bode_markers_tree_values = []
+        self.Bode_markers_tree_frequencies = []
+        self.Bode_markers_tree_amplitudes = []
+        self.Bode_markers_tree_phases = []
         
         #Tabella per i marker sul grafico di Nyquist
         self.columns_N=('Real', 'Immaginary')
@@ -459,8 +462,8 @@ class InsulinometroApp(tk.Tk):
         self.Nyquist_markers_tree.grid(row=0, column=0, sticky="nsew")
         self.Nyquist_markers_tree.heading('Real', text ='Real Part')
         self.Nyquist_markers_tree.heading('Immaginary', text ='Immaginary Part')
-        self.Nyquist_markers_tree_indexes = []
-        self.Nyquist_markers_tree_values = []
+        self.Nyquist_markers_tree_reals = []
+        self.Nyquist_markers_tree_immaginaries = []
 
         # Activity Log at the bottom (spans across both columns)
         activity_log = tk.Frame(self.data_frame, bg="grey")
@@ -520,7 +523,7 @@ Segui questi passaggi per utilizzare al meglio l'applicazione.
 4. Avvio della simulazione
    - Dopo aver configurato i parametri, fai clic sul pulsante `Start ` per avviare la simulazione.
    - Se connessa ad un dispositivo BLE, l’applicazione elaborerà i dati e invierà le istruzioni ad esso.
-     In vaso contrario sarà avviata una simulazione inserendo manualmente i valori di resistenza tra 1 Ohm e 500 Ohm.
+     In vaso contrario sarà avviata una simulazione inserendo randomicamente (per simulare la ricezione dati) i valori di resistenza tra 1 Ohm e 500 Ohm.
 
 5. Monitoraggio dei risultati
     * Visualizzazione in tempo reale:
@@ -537,14 +540,14 @@ Segui questi passaggi per utilizzare al meglio l'applicazione.
 
 6. Funzioni aggiuntive
    - Interrompere la simulazione:
-     * Usa il pulsante `Stop` per fermare la raccolta dati in corso (solo se connessi).
+     * Usa il pulsante `Stop` per fermare la raccolta dati in corso (solo se connessi/siulazione in corso).
    - Esportazione dei dati :
-     * Salva i risultati della simulazione in un file .csv o .txt per un’analisi successiva.
+     * Salva i risultati della simulazione in un file .csv o .txt per un’analisi successiva (da implementare).
 
 7. Chiudere l’applicazione
    - Per chiudere il programma, utilizza il pulsante `Exit` o chiudi la finestra direttamente.
 
-Suggerimenti utili:
+Suggerimenti utili per la connessione:
    - Assicurati di avere i permessi per il Bluetooth:
      * L’applicazione necessita dell’accesso BLE per funzionare correttamente.
    - Mantieni il dispositivo BLE vicino:
@@ -612,6 +615,7 @@ Suggerimenti utili:
     
     def disconnect_button_click(self):
         print("Disconnect")
+        self.connected = False
         self.switch_bluetooth_frame(False)
         global popup_scan_aperto
         #Check chiusura pop-up scan
@@ -630,6 +634,16 @@ Suggerimenti utili:
 
     def start_button_click(self):
         print("Start")
+        #Controllo se ci sono valori già inseriti per ricordare all'utente
+        if self.x_values_N:
+            risposta = messagebox.askyesno("Conferma Salvataggio", "Ci sono dati non salvati.\nVuoi salvare?")
+            if risposta:  # Se l'utente clicca su "Sì"
+                self.saveData_button_click() #salvataggio da implementare
+                self.reset_button_click()
+            else:  # Se l'utente clicca su "No"
+                print("Dati non salvati.")
+                self.reset_button_click()
+            
 
         #Acquisizione dei valori delle entry e controllo su di essi
         success = self.acquire_values()
@@ -767,9 +781,25 @@ Suggerimenti utili:
         self.y_values_N = []
         self.update_graph(self.ax_N, self.canvas_N, self.x_values_N, self.y_values_N, "")
 
-        #Reset tabella
+        #Reset tabelle
         for item in self.tree.get_children():
             self.tree.delete(item)
+        
+        self.tree_indexes = []
+        self.tree_values = []
+
+        for item in self.Bode_markers_tree.get_children():
+            self.Bode_markers_tree.delete(item)
+        
+        self.Bode_markers_tree_frequencies = []
+        self.Bode_markers_tree_amplitudes = []
+        self.Bode_markers_tree_phases = []
+
+        for item in self.Nyquist_markers_tree.get_children():
+            self.Nyquist_markers_tree.delete(item)
+
+        self.Nyquist_markers_tree_reals = []
+        self.Nyquist_markers_tree_immaginaries = []
 
         #PROVVISORIO
         self.ascissa=1
@@ -825,6 +855,8 @@ Suggerimenti utili:
     def update_graph_and_tree(self, new_value):
         #Aggiorno la tabbella
         self.tree.insert("","end", values=(self.ascissa, new_value))
+        self.tree_indexes.append(self.ascissa)
+        self.tree_values.append(new_value)
 
         #Aggiorno i gragici
         #Bode Modulo
@@ -863,7 +895,11 @@ Suggerimenti utili:
                 frequency = pointM[0]
                 amplitude = pointM[1]
                 phase = pointF[1]
-                self.Bode_markers_tree.insert("", "end", values=(frequency, amplitude, phase))
+                if frequency not in self.Bode_markers_tree_frequencies:
+                    self.Bode_markers_tree.insert("", "end", values=(frequency, amplitude, phase))
+                    self.Bode_markers_tree_frequencies.append(frequency)
+                    self.Bode_markers_tree_amplitudes.append(amplitude)
+                    self.Bode_markers_tree_phases.append(phase)
 
         elif event.inaxes == self.ax_N:
             pointN = self.add_marker(self.canvas_N, self.x_values_N, self.y_values_N, self.ax_N, event)
@@ -872,8 +908,10 @@ Suggerimenti utili:
                 real = pointN[0]
                 immaginary = pointN[1]
                 self.Nyquist_markers_tree.insert("", "end", values=(real, immaginary))
+                self.Nyquist_markers_tree_reals.append(real)
+                self.Nyquist_markers_tree_immaginaries.append(immaginary)
 
-    def add_marker(self, canvas, x_data, y_data, ax, event):
+    def add_marker(self, canvas, x_data, y_data, ax, event,):
         """Aggiungi il marker solo se il clic è vicino ai punti esistenti nel grafico."""
         x_click = event.xdata
         y_click = event.ydata
@@ -883,16 +921,17 @@ Suggerimenti utili:
             return None
 
         # Distanza minima per considerare "vicino"
-        threshold = 10  # Puoi regolare questo valore in base alla densità dei punti
+        max = self.tree_indexes[-1]
+
+        threshold = 0.025 * max # Puoi regolare questo valore in base alla densità dei punti
 
         # Trova il punto più vicino tra i punti definiti
         closest_point = None
         min_distance = float('inf')  # Inizialmente impostata a infinito
 
         for i in range(len(x_data)):
-            # Calcola la distanza euclidea tra il clic e il punto corrente
-            #Ciao Manu
-            distance = math.sqrt((x_data[i] - x_click) ** 2 + (y_data[i] - y_click) ** 2)
+            # Calcola la distanza euclidea (in R) tra il clic e il punto corrente
+            distance = math.sqrt((x_data[i] - x_click) ** 2 )
             if distance < min_distance and distance <= threshold:
                 min_distance = distance
                 closest_point = (x_data[i], y_data[i])
@@ -1052,14 +1091,20 @@ Suggerimenti utili:
            # asyncio.run(connect_to_device())
             self.ble_address = self.selected_mac
             self.ble_name = self.selected_name
+            global popup_dati_aperto
 
-            self.open_popup_dati()
-            self.switch_bluetooth_frame(True)
-            
+            if self.connected == False or popup_dati_aperto == False:
+                self.open_popup_dati()
+                self.switch_bluetooth_frame(True)
+                self.connected = True
+                popup_dati_aperto = True
+            else:
+                self.popup_dati.destroy()
+                self.open_popup_dati()
 
         #Pulsante per aggiornare il pop up
-        update_button = tk.Button(self.popup_scan, text="Aggiorna", command=self.update_device_listbox)
-        update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
+        self.update_button = tk.Button(self.popup_scan, text="Aggiorna", command=self.update_device_listbox)
+        self.update_button.grid(row=1, column=1, padx=10, pady=5, sticky="nesw")  
 
         #Pulsante per connettersi al dispositivo selezionato
         connect_button = tk.Button(self.popup_scan, text="Connetti", command=connect_button_handler)
@@ -1099,6 +1144,7 @@ Suggerimenti utili:
     async def scan_for_devices_and_update(self):
             self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
             self.device_listbox.insert(tk.END, "Scanning for devices...")
+            self.update_button.config(state=tk.DISABLED)
 
             print("Scanning for devices...")
             self.found_devices = await BleakScanner.discover()  # Scansione dei dispositivi
@@ -1107,6 +1153,8 @@ Suggerimenti utili:
             self.device_listbox.delete(0, tk.END)  # Cancella la lista precedente
             for device in self.found_devices:
                 self.device_listbox.insert(tk.END, f"{device.name} ({device.address})")  # Aggiungi i nuovi dispositivi
+            self.update_button.config(state=tk.NORMAL)
+
 
     async def read_and_plot_live(self):
         while(self.plotting == True):
@@ -1119,7 +1167,7 @@ Suggerimenti utili:
                 frequency = int(self.mfrequency_str.get())
                 time.sleep(1 / frequency)
 
-#Funzione per connessione funzionante ma non implementata causa limitazioni hardware/software
+#Funzione per connessione Server/Client (vedasi codice serverprototipo.py) funzionante ma non implementata causa limitazioni hardware/software
     #async def connect_to_device(address): #richiede l'indirizzo MAC del dispositivo
 #        client = BleakClient(address)
 #        try:
