@@ -43,6 +43,8 @@ class InsulinometroApp(tk.Tk):
 
         self.SERconnected = False
 
+        self.connected = False
+
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
         self.frequency_str = tk.StringVar()
