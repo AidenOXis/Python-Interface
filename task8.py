@@ -1,25 +1,19 @@
 import tkinter as tk
-from tkinter import ttk,scrolledtext,messagebox
+from tkinter import ttk,messagebox
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from bleak import BleakScanner 
-import asyncio
-import threading
+import asyncio,threading
 from bleak import BleakClient
-import math
-import random
-import time
-import serial
+import math,random,time
+import serial,serial.tools.list_ports_windows
 
 SERVICE_UUID = "12345678_1234_5678_1234_56789abcdef0"
 CHARACTERISTIC_UUID_READ = "12345678_1234_5678_1234_56789abcdef1"
-CHARACTERISTIC_UUID_WRITE = "12345678_1234_5678_1234_56789abcdef2" 
-# Configurazione della porta seriale
-esp_port = "COM3"  # Sostituisci con la porta corretta del tuo ESP32
-baud_rate = 115200
-ser = serial.Serial(esp_port, baud_rate, timeout=1)
+CHARACTERISTIC_UUID_WRITE = "12345678_1234_5678_1234_56789abcdef2"
 
+baud_rate = 115200 
 
 class InsulinometroApp(tk.Tk):
 
@@ -47,7 +41,7 @@ class InsulinometroApp(tk.Tk):
 
         self.plotting = False
 
-        self.connected = False
+        self.SERconnected = False
 
         #Variabili per i campi di input
         self.voltage_str = tk.StringVar()
@@ -648,6 +642,16 @@ Suggerimenti utili per la connessione:
 
     def start_button_click(self):
         print("Start")
+         # Configurazione della porta seriale
+        esp_port = self.find_esp32()
+        if esp_port:
+            self.ser = serial.Serial(esp_port, baud_rate, timeout=1)
+            print("Connessione stabilita")
+            self.SERconnected= True
+        else:
+            print("Il dispositivo seriale non è stato trovato")
+            messagebox.showerror("Errore comunicazione seriale","Nessun dispositivo collegato alla porta seriale,"
+                                 "riprovare a connettere.")
         #Controllo se ci sono valori già inseriti per ricordare all'utente
         if self.x_values_N:
             risposta = messagebox.askyesno("Conferma Salvataggio", "Ci sono dati non salvati.\nVuoi salvare?")
@@ -696,12 +700,14 @@ Suggerimenti utili per la connessione:
 
             else:
                 #AREA TEST
-                self.open_popupSM() #apertura monitor seriale per input dati da inviare alla board
+                if(self.SERconnected == True):
+                    self.open_popupSM() #apertura monitor seriale per input dati da inviare alla board
                 #Passaggio alla schermata Data
                 self.show_frame(self.data_frame)
                 #self.open_popup_input()   #Per eseguire il test sul plottaggio dei grafici
                 self.plotting = True
                 thread = threading.Thread(target=lambda: asyncio.run(self.read_and_plot_live()))  # Esegui la scansione
+                thread.daemon=True  # Impostiamo il thread come daemon per chiuderlo automaticamente alla fine del programma
                 thread.start()
                  
     def acquire_values(self):
@@ -780,13 +786,10 @@ Suggerimenti utili per la connessione:
         print("Exit")
         self.on_closing()
         
-
     def on_closing(self):
-        self.plotting = False
         time.sleep(1/10)
         self.destroy()
         self.quit()
-
 
     def reset_button_click(self):
         #Reset Grafici
@@ -982,7 +985,7 @@ Suggerimenti utili per la connessione:
         "Clic troppo lontano dai punti esistenti!\nPer favore, clicca più vicino a un punto del grafico."
     )
 
-    #Funzioni di apertura popup
+    #Funzioni di apertura/chiusura popup
     def open_popup_input(self):
         #Creazione del popup
         self.popup_input = tk.Toplevel()
@@ -1174,7 +1177,6 @@ Suggerimenti utili per la connessione:
         self.popup_SM.rowconfigure(0, weight=1)
         self.popup_SM.columnconfigure(0, weight=1)
         self.popup_SM.title("Monitor Seriale in comunicazione con ESP32")
-        #self.popup_SM.geometry("200x100")
 
         # Frame per i dati
         data_frame = ttk.LabelFrame(self.popup_SM, text="Dati monitor seriale")
@@ -1198,24 +1200,34 @@ Suggerimenti utili per la connessione:
         self.data_text.grid(column=0, row=1, columnspan=2, padx=10, pady=5, sticky="nesw")
 
         def send_frequency():
-            frequency = float (self.frequency_entry.get())
-            if frequency > 0:
-                ser.write(f"{frequency}\n".encode())  # Invia la frequenza come stringa
-                print(f"Frequenza inviata: {frequency} ms")
-                self.data_text.insert(tk.END, f"Frequenza inviata: {frequency} ms \n")
+            try:
+                #Fase di inserimento controllata a valori compresi tra 20 (minimo semi-periodo percettibile in maniera evidente) e 10000
+                frequency = float (self.frequency_entry.get())
+                if frequency < 20 or frequency >10000:
+                    raise ValueError("Il valore del semiperiodo deve essere compreso tra 20 e 10000ms.\n")
+                
 
+                self.ser.write(f"{frequency}\n".encode())  # Invia la frequenza come stringa
+                print(f"Semiperiodo inviato: {frequency} ms")
+                self.data_text.insert(tk.END, f"Semiperiodo inviato: {frequency} ms \n")
                 time.sleep(1/10)
         
                 # Legge la frequenza corrente dall'ESP32
-                if ser.in_waiting > 0:
-                    current_frequency = ser.readline().decode('utf-8').strip()
-                    print(f"Frequenza corrente ricevuta: {current_frequency} ms")
-                    if(current_frequency == "E (89) psram: PSRAM ID read error: 0xffffffff" or current_frequency =="e+E (89) psram: PSRAM ID read error: 0xffffffff"):
-                        current_frequency = ser.readline().decode('utf-8').strip()
+                if self.ser.in_waiting > 0:
+                    try:
+                        current_frequency =self. ser.readline().decode('utf-8').strip()
+                        if not current_frequency or current_frequency == "E (89) psram: PSRAM ID read error: 0xffffffff" or current_frequency =="eE (89) psram: PSRAM ID read error: 0xffffffff":
+                            raise ValueError()
+                    except (serial.SerialException, ValueError) as e:
+                        current_frequency = self.ser.readline().decode('utf-8').strip()
 
-                    self.data_text.insert(tk.END, f"Frequenza corrente ricevuta: {current_frequency} ms \n")
-                    
-        
+                            
+                    print(f"Semiperiodo corrente ricevuto: {current_frequency} ms")
+                    self.data_text.insert(tk.END, f"Semiperiodo corrente ricevuto: {current_frequency} ms \n")
+            except ValueError as e:
+                print(e)
+                self.data_text.insert(tk.END, e)
+            
         blinkFrequency_button = ttk.Button(
             data_frame, text="Aggiorna Frequenza Blink",
             command=send_frequency)
@@ -1268,13 +1280,13 @@ Suggerimenti utili per la connessione:
             self.connect_button.config(state=tk.NORMAL)
 
     async def read_and_plot_live(self):
-        while(self.plotting == True):
-            self.new_resistance = random.randint(1, 500)
-            self.update_graph_and_tree(self.new_resistance)
-            if(self.mode == "Single Mode"):
+            while(self.plotting == True):
+             self.new_resistance = random.randint(1, 500)
+             self.update_graph_and_tree(self.new_resistance)
+             if(self.mode == "Single Mode"):
                 frequency = int(self.frequency_str.get())
                 time.sleep(1 / frequency)
-            else:
+             else:
                 frequency = int(self.mfrequency_str.get())
                 time.sleep(1 / frequency)
 
@@ -1362,6 +1374,16 @@ Suggerimenti utili per la connessione:
         except Exception as e:
             print(f"Errore durante la lettura dei dati: {e}")
 
+#Funzione lettura porta seriale collegata ad esp32
+    def find_esp32(self):
+        ports = serial.tools.list_ports_windows.comports()
+        for port in ports:
+            if "USB" in port.description or "UART" in port.description:
+                print(f"Trovato ESP32: {port.device} - {port.description}")
+                return port.device
+        print("Nessun ESP32 trovato!")
+        return None
+    
 if __name__ == "__main__":
     app = InsulinometroApp()
     app.mainloop()
